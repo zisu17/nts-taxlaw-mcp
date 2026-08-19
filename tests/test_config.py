@@ -40,9 +40,10 @@ def test_defaults(load_config) -> None:
     config = load_config({})
     for site in (config.NTS, config.OLTA):
         assert site.timeout_seconds == 20.0
-        assert site.retries == 3
-        assert site.rate_per_min == 60
-        assert site.rate_burst == 20
+        assert site.retries == 1
+        assert site.rate_per_min == 30
+        assert site.rate_burst == 10
+        assert site.cooldown_seconds == 900
         assert site.body_limit == 30_000
         assert "Mozilla/5.0" in site.user_agent
     assert config.CACHE_MAX_ENTRIES == 600
@@ -89,7 +90,7 @@ def test_site_variable_alone_does_not_leak_to_the_other_site(load_config) -> Non
     """이름과 적용 범위가 일치해야 한다. `NTS_*` 가 지방세에 걸리면 안 된다."""
     config = load_config({"NTS_RATE_PER_MIN": "5", "NTS_USER_AGENT": "NtsOnly/2", "NTS_BODY_LIMIT": "900"})
     assert config.NTS.rate_per_min == 5
-    assert config.OLTA.rate_per_min == 60          # 기본값 유지
+    assert config.OLTA.rate_per_min == 30          # 기본값 유지
     assert config.NTS.user_agent == "NtsOnly/2"
     assert "Mozilla/5.0" in config.OLTA.user_agent  # 기본값 유지
     assert config.NTS.body_limit == 900
@@ -100,7 +101,7 @@ def test_olta_variable_alone_does_not_leak_to_nts(load_config) -> None:
     config = load_config({"OLTA_RATE_PER_MIN": "5", "OLTA_TIMEOUT_MS": "1000"})
     assert config.OLTA.rate_per_min == 5
     assert config.OLTA.timeout_seconds == 1.0
-    assert config.NTS.rate_per_min == 60
+    assert config.NTS.rate_per_min == 30
     assert config.NTS.timeout_seconds == 20.0
 
 
@@ -117,7 +118,7 @@ def test_cache_max_is_shared_and_keeps_legacy_name(load_config) -> None:
 def test_invalid_value_falls_through_instead_of_crashing(load_config, bad: str) -> None:
     """잘못 준 값 때문에 서버가 못 뜨는 것보다 기본값으로 도는 편이 낫다."""
     config = load_config({"NTS_RATE_PER_MIN": bad})
-    assert config.NTS.rate_per_min == 60
+    assert config.NTS.rate_per_min == 30
 
 
 def test_invalid_site_value_falls_back_to_common_not_default(load_config) -> None:

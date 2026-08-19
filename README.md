@@ -309,10 +309,11 @@ Claude Code나 Codex를 사용할 수 없거나 직접 설치해야 한다면
 | 항목 | 공통 | 국세 전용 | 지방세 전용 | 기본값 |
 |---|---|---|---|---:|
 | 요청 타임아웃(ms) | `TAXLAW_TIMEOUT_MS` | `NTS_TIMEOUT_MS` | `OLTA_TIMEOUT_MS` | `20000` |
-| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `3` |
-| 재시도 대기 base(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `300` |
-| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `60` |
-| 버스트 허용량 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `20` |
+| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `1` |
+| 재시도 대기 base(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `1000` |
+| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `30` |
+| 버스트 허용량 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `10` |
+| 차단 신호 후 대기(초) | `TAXLAW_COOLDOWN_SEC` | `NTS_COOLDOWN_SEC` | `OLTA_COOLDOWN_SEC` | `900` |
 | 본문 최대 글자수 | `TAXLAW_BODY_LIMIT` | `NTS_BODY_LIMIT` | `OLTA_BODY_LIMIT` | `30000` |
 | User-Agent | `TAXLAW_USER_AGENT` | `NTS_USER_AGENT` | `OLTA_USER_AGENT` | Chrome UA |
 | 캐시 최대 항목 수 | `TAXLAW_CACHE_MAX` | — | — | `600` |
@@ -333,6 +334,11 @@ OLTA_RATE_PER_MIN=20
 
 **요청 한도는 사이트별로 따로 셉니다.** 두 곳이 다른 기관의 서버이므로 한쪽 조회가
 다른 쪽 한도를 깎지 않습니다.
+
+403·429 또는 차단 페이지가 감지되면 재시도하지 않고 기본 15분 동안
+해당 사이트 요청을 중지합니다. `Retry-After`가 더 길면 그 값을 따릅니다.
+단, 외부 기관의 WAF·정책은 예고 없이 바뀐 수 있어 차단 가능성을 0으로 보장할 수는 없습니다.
+보호 한도는 프로세스별이므로 같은 IP에서 여러 인스턴스를 동시 실행하지 마세요.
 
 **캐시는 하나를 공유합니다.** 키에 출처를 담아 구분하므로 사이트별 재정의가 없습니다.
 이전 이름 `NTS_CACHE_MAX` 도 계속 동작합니다.
