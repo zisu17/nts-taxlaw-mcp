@@ -190,6 +190,20 @@ def parse_detail(html: str) -> dict[str, object]:
 _BRACKET_SPACE = re.compile(r"「\s*(.*?)\s*」")
 _ARTICLE_SPACE = re.compile(r"제\s*(\d+)\s*(조|항|호|목|절|장|편|款)")
 _NUM_SPACE = re.compile(r"(\d)\s+(\d)")
+_WHITESPACE = re.compile(r"\s+")
+_PAREN_OPEN_SPACE = re.compile(r"\(\s+")
+_PAREN_CLOSE_SPACE = re.compile(r"\s+\)")
+_PUNCT_SPACE = re.compile(r"\s+([,.·])")
+
+
+def _strip_inner_spaces(match: re.Match[str]) -> str:
+    r"""「 지방세법 」 → 「지방세법」.
+
+    f-string 안에서 처리하지 않는 이유: 표현식에 백슬래시(`\s`)를 넣는 문법은
+    Python 3.12(PEP 701)부터라서 3.11 에서 SyntaxError 가 난다.
+    이 프로젝트는 3.11 을 지원한다(pyproject: requires-python >= 3.11).
+    """
+    return "「" + _WHITESPACE.sub("", match.group(1)) + "」"
 
 
 def _tighten_articles(text: str) -> str:
@@ -198,12 +212,12 @@ def _tighten_articles(text: str) -> str:
     사이트가 글자 단위로 태그를 감싸 놓아 태그를 제거하면 공백이 남는다. 이 상태로
     반환하면 모델이 조문을 인용할 때 원문과 다른 문자열을 쓰게 된다.
     """
-    text = _BRACKET_SPACE.sub(lambda m: f"「{re.sub(r'\\s+', '', m.group(1))}」", text)
-    text = _ARTICLE_SPACE.sub(lambda m: f"제{m.group(1)}{m.group(2)}", text)
+    text = _BRACKET_SPACE.sub(_strip_inner_spaces, text)
+    text = _ARTICLE_SPACE.sub(lambda m: "제" + m.group(1) + m.group(2), text)
     text = _NUM_SPACE.sub(r"\1\2", text)
     # 여는·닫는 괄호 안쪽 공백
-    text = re.sub(r"\(\s+", "(", text)
-    text = re.sub(r"\s+\)", ")", text)
+    text = _PAREN_OPEN_SPACE.sub("(", text)
+    text = _PAREN_CLOSE_SPACE.sub(")", text)
     # 쉼표·마침표 앞 공백
-    text = re.sub(r"\s+([,.·])", r"\1", text)
+    text = _PUNCT_SPACE.sub(r"\1", text)
     return text

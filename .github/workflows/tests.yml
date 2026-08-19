@@ -30,7 +30,22 @@ jobs:
           enable-cache: true
       - name: Install dependencies
         run: uv sync --locked --extra dev
+      # fixture 가 빠지면 requires_fixtures 가 테스트를 건너뛰고 CI 는 초록으로 통과한다.
+      # 두 출처의 fixture 를 각각 확인해 조용한 skip 을 막는다.
       - name: Verify committed fixtures
-        run: test -f tests/fixtures/codes.json.gz
+        run: |
+          test -f tests/fixtures/codes.json.gz          # 국세(JSON)
+          test -f tests/fixtures/olta_search_interpretation.html.gz   # 지방세(HTML)
+      # -W error::SyntaxWarning 은 3.11 에서만 깨지는 문법을 매트릭스로 잡는다
+      #   (f-string 표현식 안의 백슬래시는 3.12+ 문법이라 3.13 에서는 통과한다)
+      # skip 은 실패로 본다 — fixture 가 빠지면 테스트가 조용히 안 돌고 CI 가 초록이 된다
       - name: Run offline tests
-        run: uv run pytest -q --ignore=tests/test_live.py
+        run: |
+          set -eo pipefail
+          uv run python -W error::SyntaxWarning -m pytest -q -ra --strict-markers \
+            --ignore=tests/test_live.py | tee /tmp/pytest.out
+          if grep -qE "[0-9]+ skipped" /tmp/pytest.out; then
+            echo "::error::오프라인 테스트에 skip 이 있습니다. fixture 누락 여부를 확인하세요."
+            grep -E "skipped" /tmp/pytest.out
+            exit 1
+          fi
