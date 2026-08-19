@@ -15,7 +15,7 @@ import html as html_module
 import re
 from dataclasses import dataclass, field
 
-from .config import BODY_LIMIT
+from .config import FALLBACK_BODY_LIMIT
 
 _HIGHLIGHT = re.compile(r"<!H[SE]>")
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
@@ -172,7 +172,7 @@ def truncate(text: str, limit: int | None = None) -> Truncated:
     클라이언트 컨텍스트를 통째로 삼키므로 자른다. **잘렸다는 사실을 반드시 표시**한다 —
     조용히 자르면 모델이 뒷부분이 없는 걸 문서에 없는 내용으로 오해한다.
     """
-    cap = BODY_LIMIT if limit is None else limit
+    cap = FALLBACK_BODY_LIMIT if limit is None else limit
     original = len(text)
     if original <= cap:
         return Truncated(text, False, original)

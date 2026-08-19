@@ -2,13 +2,14 @@
 
 한국 세법 자료를 출처별로 통합 조회하기 위한 MCP 서버입니다.
 
-현재는 국세청 **국세법령정보시스템**(<https://taxlaw.nts.go.kr>) 원본 조회를 지원하며,
-향후 지방세 자료를 별도 도메인으로 추가할 수 있도록 프로젝트 이름과 구조를 확장했습니다.
-Python과 FastMCP로 구현했습니다.
+두 출처의 원본을 직접 조회합니다. Python과 FastMCP로 구현했습니다.
 
-- 최신 세법해석례 조회
+- **국세** — 국세청 **국세법령정보시스템** (<https://taxlaw.nts.go.kr>)
+- **지방세** — 한국지방세연구원(KILF) **지방세 법령정보시스템** (<https://www.olta.re.kr>)
+
+- 최신 세법해석례·지방세 유권해석 조회
 - 회신·판단·결론 등 상세 본문 구조화
-- 문서번호 기반 exact lookup
+- 문서번호 기반 exact lookup (국세·지방세 각각의 번호 체계 지원)
 - 판례·결정례 및 행정 해석기준 검색
 - 출처와 근거 유형을 포함한 구조화 응답
 
@@ -17,6 +18,8 @@ Python과 FastMCP로 구현했습니다.
 ---
 
 ## 1. 지원 데이터
+
+**국세** — 국세청 국세법령정보시스템
 
 | 영역 | 대상 | 검색 | 문서번호 조회 | 본문 |
 |---|---|:---:|:---:|---|
@@ -27,13 +30,28 @@ Python과 FastMCP로 구현했습니다.
 | 행정 해석기준 | 국세청 고시 206건, 훈령 143건 | O | - | 메타데이터 |
 | 별표·서식 | 법령서식 34,487건 | O | - | 메타데이터·파일 식별자 |
 
-### 확장 방향
+**지방세** — 한국지방세연구원(KILF) 지방세 법령정보시스템
 
-- 현재 지원 범위: 국세청 국세법령정보시스템의 국세 자료
-- 향후 지원 범위: 지방세 법령해석·심판례 등 지방세 자료
-- 확장 원칙: 국세와 지방세의 출처·문서 식별자·권위 수준을 섞지 않고 도메인별로 구분
+| 영역 | 대상 | 검색 | 문서번호 조회 | 본문 |
+|---|---|:---:|:---:|---|
+| 유권해석 | 행정안전부 유권해석(지방세 예규), 법제처 유권해석 | O | O | 답변요지·질의요지·회신내용·관계법령 |
+| 판례·결정례 | 조세심판원 심판결정례, 감사원 심사결정례, 법원 판례, 헌재 결정례 | O | O | 요지·이유·결정유형 |
 
-지방세 도메인이 구현되기 전까지 지방세 자료를 지원한다고 간주하지 않습니다.
+취득세·등록면허세·재산세·자동차세·주민세·지방소득세·지역자원시설세·지방교육세·담배소비세 등
+지방세 22개 세목으로 필터할 수 있습니다.
+
+### 국세와 지방세의 분리
+
+국세와 지방세는 출처·문서번호 체계·권위 수준이 모두 달라 섞지 않고 도메인별로 나눠 둡니다.
+
+| | 국세 | 지방세 |
+|---|---|---|
+| 출처 | 국세청 국세법령정보시스템 | 한국지방세연구원 지방세 법령정보시스템 |
+| 문서번호 | `서면-2026-법규재산-0119` (종류-연도-분류-일련) | `부동산세제과-1794(2026.6.9.)호` (부서-일련) |
+| 예규 권위 수준 | `nts_ruling` | `local_ruling` |
+| 도구 접두 | `search_tax_*`, `lookup_tax_document` | `search_local_tax_*`, `lookup_local_tax_document` |
+
+응답의 `taxLevel` 필드로 `national`·`local` 을 구분할 수 있습니다.
 
 ### 수록 규모
 
@@ -71,14 +89,19 @@ Python과 FastMCP로 구현했습니다.
 
 ## 2. 데이터 출처
 
-현재 제공되는 모든 데이터는 **국세청 국세법령정보시스템**에서 조회합니다.
+| 세목 구분 | 출처 | 주소 |
+|---|---|---|
+| 국세 | 국세청 국세법령정보시스템 | <https://taxlaw.nts.go.kr> |
+| 지방세 | 한국지방세연구원(KILF) 지방세 법령정보시스템 | <https://www.olta.re.kr> |
 
-<https://taxlaw.nts.go.kr>
+두 사이트 모두
 
-- 공개 조회 엔드포인트 `POST /action.do` 사용
+- 공개 조회 경로만 사용 (국세청 `POST /action.do`, 지방세 목록·상세 화면)
 - 로그인·CAPTCHA·접근제어 우회 없음
 - 별도 세션·쿠키·인증키 불필요
 - 모든 응답에 원본 추적 정보 포함
+
+국세:
 
 ```json
 {
@@ -88,6 +111,19 @@ Python과 FastMCP로 구현했습니다.
   "documentNumber": "서면-2026-법규재산-0119",
   "sourceUrl": "https://taxlaw.nts.go.kr/qt/USEQTA002P.do?ntstDcmId=200000000000022584",
   "retrievedAt": "2026-08-19T13:34:58Z"
+}
+```
+
+지방세:
+
+```json
+{
+  "sourceAgency": "행정안전부",
+  "sourceSystem": "지방세 법령정보시스템",
+  "sourceId": "60099135",
+  "documentNumber": "부동산세제과-1794(2026.6.9.)호",
+  "sourceUrl": "https://www.olta.re.kr/explainInfo/authoInterpretationDetail.do?num=60099135",
+  "retrievedAt": "2026-08-20T04:12:00Z"
 }
 ```
 
@@ -261,21 +297,56 @@ Claude Code나 Codex를 사용할 수 없거나 직접 설치해야 한다면
 
 모든 항목은 선택 사항이며 기본값만으로 실행할 수 있습니다.
 
-| 변수 | 기본값 | 설명 |
-|---|---:|---|
-| `NTS_TIMEOUT_MS` | `20000` | 요청 타임아웃(ms) |
-| `NTS_RETRIES` | `3` | 재시도 횟수 |
-| `NTS_RATE_PER_MIN` | `60` | 분당 요청 한도 |
-| `NTS_RATE_BURST` | `20` | 버스트 허용량 |
-| `NTS_BODY_LIMIT` | `30000` | 본문 최대 글자수 |
-| `NTS_CACHE_MAX` | `600` | 캐시 최대 항목 수 |
-| `NTS_USER_AGENT` | Chrome UA | User-Agent |
+두 기관의 시스템을 조회하므로 설정도 **공통값 + 사이트별 재정의** 두 층입니다.
+우선순위는 **사이트별 > 공통 > 기본값** 입니다.
+
+| 접두 | 적용 범위 |
+|---|---|
+| `TAXLAW_*` | 국세·지방세 공통 |
+| `NTS_*` | 국세(국세청)만 재정의 |
+| `OLTA_*` | 지방세(한국지방세연구원)만 재정의 |
+
+| 항목 | 공통 | 국세 전용 | 지방세 전용 | 기본값 |
+|---|---|---|---|---:|
+| 요청 타임아웃(ms) | `TAXLAW_TIMEOUT_MS` | `NTS_TIMEOUT_MS` | `OLTA_TIMEOUT_MS` | `20000` |
+| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `3` |
+| 재시도 대기 base(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `300` |
+| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `60` |
+| 버스트 허용량 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `20` |
+| 본문 최대 글자수 | `TAXLAW_BODY_LIMIT` | `NTS_BODY_LIMIT` | `OLTA_BODY_LIMIT` | `30000` |
+| User-Agent | `TAXLAW_USER_AGENT` | `NTS_USER_AGENT` | `OLTA_USER_AGENT` | Chrome UA |
+| 캐시 최대 항목 수 | `TAXLAW_CACHE_MAX` | — | — | `600` |
+
+예시:
+
+```bash
+# 양쪽 다 타임아웃을 10초로
+TAXLAW_TIMEOUT_MS=10000
+
+# 공통 10초, 다만 국세청만 30초로 늘림
+TAXLAW_TIMEOUT_MS=10000
+NTS_TIMEOUT_MS=30000
+
+# 지방세 쪽 요청만 더 천천히
+OLTA_RATE_PER_MIN=20
+```
+
+**요청 한도는 사이트별로 따로 셉니다.** 두 곳이 다른 기관의 서버이므로 한쪽 조회가
+다른 쪽 한도를 깎지 않습니다.
+
+**캐시는 하나를 공유합니다.** 키에 출처를 담아 구분하므로 사이트별 재정의가 없습니다.
+이전 이름 `NTS_CACHE_MAX` 도 계속 동작합니다.
+
+잘못된 값(숫자가 아니거나 하한 미달)은 그 항목만 건너뛰고 다음 후보나 기본값을
+씁니다. 설정 오류로 서버가 뜨지 않는 일은 없습니다.
 
 ---
 
 ## 9. MCP 도구
 
-총 9개의 도구를 제공합니다.
+총 12개의 도구를 제공합니다.
+
+**국세** (국세청)
 
 | 도구 | 용도 |
 |---|---|
@@ -286,8 +357,19 @@ Claude Code나 Codex를 사용할 수 없거나 직접 설치해야 한다면
 | `search_tax_guidance` | 기본통칙·집행기준·고시·훈령 검색 |
 | `get_tax_guidance` | 통칙·집행기준 특정 조항 조회 |
 | `search_tax_forms` | 법령서식·별표 검색 |
-| `search_taxlaw` | 전체 영역 통합 검색 |
+| `search_taxlaw` | 국세 전체 영역 통합 검색 |
 | `tax_research` | 세무 질의에 대한 층별 근거 수집 |
+
+**지방세** (한국지방세연구원)
+
+| 도구 | 용도 |
+|---|---|
+| `search_local_tax_interpretations` | 지방세 유권해석 검색 (행정안전부·법제처) |
+| `search_local_tax_decisions` | 지방세 심판·판례·감사원·헌재 검색 |
+| `lookup_local_tax_document` | 지방세 문서번호 exact lookup + 본문 조회 |
+
+취득세·재산세 등 지방세 사안은 `search_local_tax_*` 를, 양도소득세·법인세 등 국세 사안은
+`search_tax_*` 를 사용합니다.
 
 문서번호를 알고 있다면 `lookup_tax_document`를 먼저 사용합니다.
 

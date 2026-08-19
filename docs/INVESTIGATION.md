@@ -338,3 +338,166 @@ A 와 B 는 **두 번째 마디가 4자리 연도인지**로 갈린다. 이 구�
 | 2페이지가 1페이지와 동일 | `startCount` 를 오프셋으로 계산 |
 | 해석례+결정례 동시 검색 0건 | 두 컬렉션을 한 요청에 섞음 |
 | 200 응답인데 JSON 파싱 실패 | 점검·차단 페이지(HTML) |
+
+---
+
+# 지방세 법령정보시스템 조사 결과
+
+조사 시점: 2026-08-20. 대상: 한국지방세연구원(KILF) **지방세 법령정보시스템**
+<https://www.olta.re.kr>. 국세청과 마찬가지로 메뉴가 아니라 **실제 HTTP 요청**을
+재현해 확인한 내용이다.
+
+## 1. 구조: JSON API 가 없다
+
+국세청은 `action.do` 단일 JSON 디스패처지만, 이 사이트는 **검색이 목록 화면 자체로
+가는 form POST** 이고 응답은 서버가 렌더링한 HTML 이다. 그래서 HTML 파싱을 피할 수
+없고, 파서를 `olta_parse.py` 한 곳에 몰아두었다.
+
+```
+POST /explainInfo/<목록화면>.do
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+menuNo, upperMenuId   ← 화면 식별자 (필수. 아래 §5 함정 참조)
+collection            ← 자료 종류
+searchType            ← 1(통합검색) | 2(문서번호검색)
+query                 ← 검색어 (연산자 & | ! [] {} 지원)
+taxTitleStr           ← 세목 코드를 `|` 로 이어 붙인 문자열
+startCount            ← **오프셋** (0, 10, 20 …). 국세청의 페이지 번호와 다르다
+startDate / endDate   ← YYYY.MM.DD
+sort=RANK, searchField=ALL, range=ALL, detailSearchIsOnOff=on
+```
+
+세션·쿠키·CSRF 토큰이 필요하지 않다(실측: 쿠키 없이 200 + 정상 결과).
+페이지의 `<meta name="csrfToken" content="">` 는 비어 있고 검증되지 않는다.
+
+## 2. 자료 종류 inventory
+
+| kind | 자료 | collection | 목록 | 상세 | 규모(취득세 검색) |
+|---|---|---|---|---|---|
+| `interpretation` | 행정안전부 유권해석 | `authoritative` | `/explainInfo/authoInterpretationList.do` | `/explainInfo/authoInterpretationDetail.do?num=` | 2,203 |
+| `moleg` | 법제처 유권해석 | `legal` | `/explainInfo/lawInterpretationList.do` | `/explainInfo/lawInterpretationDetail.do?num=` | 340 |
+| `tribunal` | 조세심판원 심판결정례 | `screen` | `/explainInfo/judgeDecisionList.do` | `/explainInfo/judgeDecisionDetail.do?num=` | 18,867 |
+| `audit` | 감사원 심사결정례 | `evaluation` | `/explainInfo/dlbDcnList.do` | `/explainInfo/dlbDcnDetail.do?num=` | 1,348 |
+| `court` | 법원 판례 | `sentencing_supreme` | `/explainInfo/decisionList.do` | `/explainInfo/detailView/decisionDtlView.do?num=&relationshipNum=&srchWrd=` | 3,098 |
+| `constitutional` | 헌법재판소 결정례 | `ordinance` | `/explainInfo/constitutionDcnList.do` | `/explainInfo/constitutionDcnDetail.do?num=` | 116 |
+
+전체 규모(질의 없음): 행안부 유권해석 3,379 · 조세심판원 25,167 · 감사원 1,952 ·
+법원 판례 5,821 · 헌재 214 · 법제처 888.
+
+미구현(조사만 완료):
+
+| 자료 | 경로 | 판단 |
+|---|---|---|
+| 지방세 관계 법령 | `/ordinance/importantList.do` | 법제처가 원본 → korean-law-mcp 중복 |
+| 지방자치단체 조례 | `/ordinance/rulesListAPI.do` | 법제처 자치법규가 원본 → 중복 |
+| 지방세관계법 운영예규 | `/ordinance/basicGeneralPrincipleList.do` | 국세 기본통칙 대응물. 진입 파라미터 미확정 |
+| 시가표준액 | `/cop/bbs/selectBoardList.do?bbsId=…214` | 게시판 첨부 파일 형태 |
+| 전자도서관·세목별 요약 | `/ebook/catalist.do`, `/itemInfo/taxItemInfoList.do` | 법적 근거 아닌 안내자료 |
+
+## 3. 세목 코드 (22개)
+
+상세검색 폼의 체크박스에서 실측했다. 필터는 **`taxTitleStr`** 에 `|` 로 이어 붙여 보낸다.
+
+```
+11100 취득세      11200 등록면허세    11300 레저세        11400 지방소비세
+12100 지역자원시설세 12200 지방교육세  21000 담배소비세     22000 주민세
+23000 지방소득세   24000 재산세       25000 자동차세       30000 기타
+30030 농어촌특별세  30040 세외수입     30050 국세          30070 지방세기본
+30080 지방세징수   30110 종합부동산세   30154 체납처분      30155 포상금
+30156 조세범      30650 개별소비세
+```
+
+필터가 실제로 동작하는지 집합으로 확인했다(query=신탁, 행안부 유권해석):
+
+| 필터 | 건수 |
+|---|---|
+| 없음 | 171 |
+| 취득세(11100) | 116 |
+| 재산세(24000) | 33 |
+| 취득세\|재산세 | 149 |
+
+`116 + 33 = 149` 로 정확히 맞는다.
+
+## 4. 검색 연산 (실측 확정)
+
+행안부 유권해석 기준.
+
+| 입력 | 건수 | 의미 |
+|---|---|---|
+| `취득세` | 2,203 | — |
+| `신탁` | 171 | — |
+| `취득세 신탁` | 122 | 공백이 **AND** |
+| `취득세&신탁` | 122 | 명시적 AND — 공백과 동일 |
+| `취득세\|신탁` | 2,250 | **OR** |
+| `취득세!신탁` | 2,079 | **NOT** |
+| `[취득세 신탁]` | 59 | 구문검색(100% 일치) |
+
+국세청과 달리 **공백이 그대로 AND** 이고, OR 는 ASCII 파이프다(국세청도 파이프지만
+국세청 쪽은 `¦`(U+00A6)가 AND 로 동작하는 함정이 따로 있다).
+
+## 5. 함정 (전부 실측으로 확인)
+
+| 증상 | 원인 |
+|---|---|
+| 법원 판례 검색이 **HTTP 500** | `menuNo`·`upperMenuId` 누락. 다른 종류는 없어도 되지만 법원 판례만 필수 |
+| 법원 판례 상세가 **HTTP 500** | `srchWrd` 누락. **빈 값이어도 존재해야** 열린다 |
+| 세목 필터가 무동작 | 체크박스 이름 `ch_deatail_search_taxlist` 를 보냈다. 실제 파라미터는 `taxTitleStr` |
+| 2페이지가 1페이지와 동일 | `startCount` 를 페이지 번호로 계산했다. 이 사이트는 **오프셋**(0,10,20) |
+| 문서 번호가 전부 `0` | 같은 `<a>` 의 `href="javascript:void(0);"` 를 팝업 인수로 잡았다. 함수명이 `…PopUp` 인 것만 봐야 한다 |
+| 세목이 파싱 안 됨 | 검색어가 세목명과 겹치면 `<!HS>취득세<!HE>` 하이라이트 마커가 끼어든다 |
+| 알림 스크립트가 행으로 잡힘 | 페이지 상단 JS 템플릿에도 `<li><p>` 문자열이 있다. `<span class="part">` 앵커가 필요하다 |
+| 조문 인용이 `제 106 조제 1 항` | 사이트가 글자 단위로 태그를 감싼다. 태그 제거 후 공백을 다시 붙여야 한다 |
+| `httpx` AsyncClient 가 죽음 | `data=` 에 튜플 리스트를 넘겼다(`Attempted to send an sync request…`). dict 로 줘야 한다 |
+
+## 6. 목록 행 마크업
+
+```html
+<li>
+  <p><span class="part">재산세</span>부동산세제과-1794(2026.6.9.)호 (2026.06.09)</p>
+  <p class="tt"><a … onclick="AddViewDocument('제목','javascript:authoritativePopUp(60099135)');">제목</a></p>
+  <p class="txt"><a …>요지</a></p>
+</li>
+```
+
+심판·판례는 머리 `<p>` 끝에 `<span class="label">기각</span>`(결정유형)이 붙고,
+법원 판례는 팝업 인수가 둘이다 — `decisionDtlpopUp(20002922, 60099210, null)`
+(첫째=`num`, 둘째=`relationshipNum`).
+
+## 7. 상세 화면 구조
+
+```
+부동산세제과-1794(2026.6.9.)호(20260609) 재산세    ← 문서번호(등록일) 세목
+공장용지 중 부대시설용 건축물의 부속토지에 대한 …      ← 제목
+관계법령    「지방세법 시행규칙」제52조
+답변요지    제조시설은 건축물 외 토지에 정착하여 …
+본문
+  < 질의요지 >  …
+  < 회신내용 >  …
+```
+
+절 이름은 자료 종류마다 다르다: 유권해석은 답변요지/질의요지/회신내용,
+심판·판례·감사원은 요지/이유. 화면 장식 문구("자료보안을 위해 비실명자료로만 인쇄되며…",
+"다운로드", "프린트")는 본문에서 제거해야 한다.
+
+## 8. 문서번호 배열
+
+국세와 완전히 다르다 — **생산 부서명 + 일련번호**다.
+
+| 예 | 구성 |
+|---|---|
+| `부동산세제과-1794(2026.6.9.)호` | 부서-일련(시행일)호 |
+| `지방소득소비세제과-1683(2026.6.15.)호` | 동일 |
+| `부동산세제과-1050호` | 날짜 없음 |
+| `부동산세제과-924` | '호' 없음 |
+| `지방세정팀-2924`, `지방세운영-4924` | 구 부서명 |
+| `행정안전부100` | 하이픈 없음 |
+| `조심2025지0592` | 심판결정례 |
+| `대법원2025두35102` | 법원 판례 |
+| `감심2024-630` | 감사원 |
+| `2019헌바107` | 헌재 |
+
+**문서번호 검색(`searchType=2`)은 일련번호 부분일치다.** `1794` → 1건이지만
+`924` → 4건(`부동산세제과-924`, `지방세운영-4924`, `지방세정팀-2924` …).
+부서명을 함께 넣으면 0건이 온다. 그래서 조회는 일련번호로 하고, **반환된 문서번호가
+입력과 정확히 같을 때만** exact 로 인정한다. 부서명 접미(`과`/`팀`)는 표기가 흔들려
+비교에서 떼어낸다.

@@ -17,7 +17,7 @@ import httpx
 from fastmcp import Client
 
 from korean_taxlaw_mcp.action_client import ACTION_URL, close_client
-from korean_taxlaw_mcp.config import DEFAULT_USER_AGENT, NTS_ORIGIN
+from korean_taxlaw_mcp.config import NTS, NTS_ORIGIN
 from korean_taxlaw_mcp.html_text import strip_highlight
 from korean_taxlaw_mcp.server import mcp
 
@@ -30,7 +30,7 @@ async def raw(action_id: str, param: dict) -> dict:
             data={"actionId": action_id, "paramData": json.dumps(param, ensure_ascii=False)},
             headers={
                 "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "user-agent": DEFAULT_USER_AGENT,
+                "user-agent": NTS.user_agent,
                 "x-requested-with": "XMLHttpRequest",
                 "origin": NTS_ORIGIN,
                 "referer": f"{NTS_ORIGIN}/index.do",

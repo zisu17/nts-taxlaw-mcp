@@ -24,6 +24,10 @@ import sys
 
 from korean_taxlaw_mcp.action_client import call_action, close_client
 from korean_taxlaw_mcp.codes import collection_for
+from korean_taxlaw_mcp.olta_client import SOURCES as OLTA_SOURCES
+from korean_taxlaw_mcp.olta_client import close_client as close_olta_client
+from korean_taxlaw_mcp.olta_client import detail_html, search_html
+from korean_taxlaw_mcp.olta_parse import parse_rows
 
 FIXTURES = pathlib.Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 
@@ -85,6 +89,13 @@ def _search_param(doc_class: str, query: str | None, limit: int) -> dict:
         "icldVcbCtl": [query] if query else [], "exclVcbCtl": [], "ntstTlawClCdList": [],
         "sortField": "DCM_RGT_DTM/DESC",
     }
+
+
+def _write_html(name: str, html: str) -> int:
+    """지방세 사이트 fixture. HTML 이 원본이라 그대로 gzip 으로 저장한다."""
+    path = FIXTURES / f"{name}.html.gz"
+    path.write_bytes(gzip.compress(html.encode("utf-8"), compresslevel=9, mtime=0))
+    return path.stat().st_size
 
 
 def _write(name: str, payload: object) -> int:
@@ -157,6 +168,67 @@ async def main() -> int:
         await fetch(name, action_id, param)
 
     await close_client()
+
+    # ── 지방세 (한국지방세연구원 지방세 법령정보시스템) ────────────────────────
+    print("\n── 지방세: 자료 종류별 검색 ──")
+    picked: dict[str, dict[str, str]] = {}
+    for kind in OLTA_SOURCES:
+        name = f"olta_search_{kind}"
+        if wanted(name):
+            try:
+                html = await search_html(kind, query="취득세")
+            except Exception as exc:  # noqa: BLE001
+                print(f"  ✗ {name:30s} {type(exc).__name__}: {exc}")
+                failed += 1
+                continue
+            size = _write_html(name, html)
+            total += 1
+            print(f"  ✓ {name:30s} {size:>9,}B  {OLTA_SOURCES[kind].label}")
+        else:
+            html = None
+        # 상세 fixture 용 대표 문서를 고른다
+        try:
+            rows = parse_rows(html if html is not None else await search_html(kind, query="취득세"))
+            if rows:
+                picked[kind] = rows[0]
+        except Exception:  # noqa: BLE001
+            pass
+
+    print("\n── 지방세: 상세 (본문 포함) ──")
+    for kind, row in picked.items():
+        name = f"olta_detail_{kind}"
+        if not wanted(name):
+            continue
+        try:
+            html = await detail_html(
+                kind, row["num"], relationship_num=row.get("relationshipNum")
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ✗ {name:30s} {type(exc).__name__}: {exc}")
+            failed += 1
+            continue
+        size = _write_html(name, html)
+        total += 1
+        print(f"  ✓ {name:30s} {size:>9,}B  {row.get('documentNumber', '?')}")
+
+    print("\n── 지방세: 문서번호 검색 (exact / 부분일치) ──")
+    for name, query, doc_mode in [
+        ("olta_docnumber_exact", "1794", True),
+        ("olta_docnumber_partial", "924", True),
+    ]:
+        if not wanted(name):
+            continue
+        try:
+            html = await search_html("interpretation", query=query, doc_number_mode=doc_mode)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ✗ {name:30s} {type(exc).__name__}: {exc}")
+            failed += 1
+            continue
+        size = _write_html(name, html)
+        total += 1
+        print(f"  ✓ {name:30s} {size:>9,}B  query={query}")
+
+    await close_olta_client()
     print(f"\n받음 {total} / 건너뜀 {skipped} / 실패 {failed}")
     if failed:
         print("실패한 fixture 가 있습니다. 국세법령정보시스템 상태를 확인하고 다시 시도하세요.")

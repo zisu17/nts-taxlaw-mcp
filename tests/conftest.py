@@ -20,7 +20,9 @@ FIXTURES_MISSING_REASON = (
 
 def fixtures_available() -> bool:
     return FIXTURES.is_dir() and (
-        any(FIXTURES.glob("*.json.gz")) or any(FIXTURES.glob("*.json"))
+        any(FIXTURES.glob("*.json.gz"))
+        or any(FIXTURES.glob("*.json"))
+        or any(FIXTURES.glob("*.html.gz"))
     )
 
 
@@ -42,9 +44,32 @@ def load(name: str) -> dict:
     pytest.skip(f"{compressed.name} 없음 — {FIXTURES_MISSING_REASON}")
 
 
+def load_html(name: str) -> str:
+    """저장된 실제 지방세 법령정보시스템 HTML 을 읽는다.
+
+    지방세 사이트는 JSON API 가 없어 렌더된 HTML 이 원본이다. 그래서 fixture 도
+    HTML 로 저장한다.
+    """
+    compressed = FIXTURES / f"{name}.html.gz"
+    if compressed.exists():
+        with gzip.open(compressed, "rt", encoding="utf-8") as fixture_file:
+            return fixture_file.read()
+
+    plain = FIXTURES / f"{name}.html"
+    if plain.exists():
+        return plain.read_text(encoding="utf-8")
+
+    pytest.skip(f"{compressed.name} 없음 — {FIXTURES_MISSING_REASON}")
+
+
 @pytest.fixture
 def fixture():
     return load
+
+
+@pytest.fixture
+def html_fixture():
+    return load_html
 
 
 @pytest.fixture(autouse=True)
@@ -52,12 +77,16 @@ def _isolate_shared_state():
     """캐시와 요청 한도는 모듈 수준 싱글턴이다. 테스트 간에 새게 두면
     앞 테스트가 버킷을 비워 뒤 테스트가 RATE_LIMITED 로 실패한다."""
     from korean_taxlaw_mcp.cache import cache
+    from korean_taxlaw_mcp.olta_client import olta_limiter
     from korean_taxlaw_mcp.rate_limit import upstream_limiter
 
     cache.clear()
     upstream_limiter.reset()
+    olta_limiter.reset()
     yield
     cache.clear()
+    upstream_limiter.reset()
+    olta_limiter.reset()
     upstream_limiter.reset()
 
 

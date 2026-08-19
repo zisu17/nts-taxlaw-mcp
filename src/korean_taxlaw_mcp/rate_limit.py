@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from .config import RATE_BURST, RATE_PER_MIN
+from .config import NTS
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,4 +51,5 @@ class TokenBucket:
         self._last = 0.0
 
 
-upstream_limiter = TokenBucket(RATE_PER_MIN, RATE_BURST)
+#: 국세청 전용 버킷. 지방세는 :data:`korean_taxlaw_mcp.olta_client.olta_limiter`.
+upstream_limiter = TokenBucket(NTS.rate_per_min, NTS.rate_burst)

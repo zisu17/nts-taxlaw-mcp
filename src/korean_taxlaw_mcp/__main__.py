@@ -13,7 +13,7 @@ import sys
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="korean-taxlaw-mcp",
-        description="한국 세법 자료 통합 조회 MCP 서버 (현재 국세청 원본 지원)",
+        description="한국 세법 자료 통합 조회 MCP 서버 (국세청 + 한국지방세연구원 원본)",
     )
     parser.add_argument("--http", action="store_true", help="STDIO 대신 HTTP 전송으로 실행")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP 바인드 주소 (기본 127.0.0.1)")

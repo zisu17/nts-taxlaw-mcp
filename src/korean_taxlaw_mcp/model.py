@@ -17,6 +17,7 @@ class AuthorityLevel(StrEnum):
     ENFORCEMENT_DECREE = "enforcement_decree"
     ENFORCEMENT_RULE = "enforcement_rule"
     NTS_RULING = "nts_ruling"
+    LOCAL_RULING = "local_ruling"
     NTS_GUIDANCE = "nts_guidance"
     ADJUDICATION = "adjudication"
     COURT_CASE = "court_case"
@@ -28,6 +29,9 @@ AUTHORITY_LABEL: dict[AuthorityLevel, str] = {
     AuthorityLevel.ENFORCEMENT_DECREE: "시행령 (대통령령 — 법적 구속력)",
     AuthorityLevel.ENFORCEMENT_RULE: "시행규칙 (부령 — 법적 구속력)",
     AuthorityLevel.NTS_RULING: "국세청 해석례 (예규 — 과세관청의 법령해석, 법원을 구속하지 않음)",
+    AuthorityLevel.LOCAL_RULING: (
+        "지방세 유권해석 (행정안전부·법제처 — 지방세 과세관청의 법령해석, 법원을 구속하지 않음)"
+    ),
     AuthorityLevel.NTS_GUIDANCE: "국세청 행정해석기준 (기본통칙·집행기준·고시·훈령 — 내부 집행기준, 법규 아님)",
     AuthorityLevel.ADJUDICATION: "불복 결정례 (과세적부·이의신청·심사청구·심판청구 — 해당 사건에 대한 결정)",
     AuthorityLevel.COURT_CASE: "법원 판례·헌재 결정 (사법적 판단)",
