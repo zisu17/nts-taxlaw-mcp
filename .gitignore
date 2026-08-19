@@ -68,12 +68,10 @@ desktop.ini
 # 갱신은 `uv lock --upgrade` 로 한다.
 .python-version
 
-# ─── 테스트 (원격 저장소에 두지 않는다) ────────────────────────────────────
-# 이 저장소의 독자는 서버를 설치해서 쓰는 사람이다. 테스트는 wheel 에 포함되지도
-# 않으므로(실측 확인) 사용자에게 아무 역할이 없다. 유지보수용으로 로컬에만 둔다.
-# 되살리려면 .gitignore 에서 아래 두 줄을 지우고 git add tests scripts 하면 된다.
-tests/
-scripts/refresh_fixtures.py
+# 테스트 코드와 재현 가능한 fixture 는 원격 저장소에서 함께 관리한다.
+# wheel 은 pyproject.toml 의 패키지 설정에 따라 src/korean_taxlaw_mcp 만 포함한다.
+# 원본 JSON 대신 압축된 *.json.gz 만 추적해 저장소 크기를 줄인다.
+tests/fixtures/*.json
 
 # ─── 이 프로젝트에서 생기는 임시 산출물 ────────────────────────────────────
 # 조사·디버깅 중 저장한 원본 응답 덤프나 페이지 스냅샷.
