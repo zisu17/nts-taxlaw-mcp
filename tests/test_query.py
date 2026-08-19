@@ -67,6 +67,11 @@ def test_site_date_conversion(raw, expected) -> None:
     assert to_site_date(raw) == expected
 
 
+@pytest.mark.parametrize("raw", ["2026-02-30", "2026-13", "2026/08/11", "2026abc08"])
+def test_invalid_site_date_is_rejected(raw: str) -> None:
+    assert to_site_date(raw) == ""
+
+
 @pytest.mark.parametrize(
     "raw,expected",
     [("20260811000000", "2026-08-11"), ("20260811", "2026-08-11"), ("2026", None), (None, None)],

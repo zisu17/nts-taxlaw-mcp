@@ -133,10 +133,13 @@ def _resolve_tax_types(value: str | list[str] | None) -> tuple[list[str], list[s
     return list(dict.fromkeys(codes)), unresolved
 
 
-def _resolve_decision_results(names: list[str] | None) -> list[str]:
+def _resolve_decision_results(names: list[str] | None) -> tuple[list[str], list[str]]:
     if not names:
-        return []
-    return [code for code, label in DECISION_RESULT.items() if label in names]
+        return [], []
+    by_label = {label: code for code, label in DECISION_RESULT.items()}
+    codes = [by_label[name] for name in names if name in by_label]
+    unresolved = [name for name in names if name not in by_label]
+    return list(dict.fromkeys(codes)), list(dict.fromkeys(unresolved))
 
 
 def _merge_law(query: str | None, law: str | None, article: str | None) -> str | None:
@@ -314,17 +317,24 @@ async def search_tax_decisions(
         return await lookup_tax_document(document_number=case_number)
 
     codes, unresolved = _resolve_tax_types(tax_type)
-    merged = _merge_law(query, law, article)
-    if not merged and not codes and not date_from and not date_to and not attribution_year:
+    result_codes, unresolved_results = _resolve_decision_results(result)
+    if unresolved_results:
         raise NtsError(
             ErrorCode.INVALID_INPUT,
-            "query, tax_type, attribution_year, date_from/date_to 중 최소 하나는 필요합니다.",
+            f"인식하지 못한 결정 결과: {', '.join(unresolved_results)}",
+            hints=[f"사용 가능한 값: {', '.join(dict.fromkeys(DECISION_RESULT.values()))}"],
+        )
+    merged = _merge_law(query, law, article)
+    if not merged and not codes and not result_codes and not date_from and not date_to and not attribution_year:
+        raise NtsError(
+            ErrorCode.INVALID_INPUT,
+            "query, tax_type, result, attribution_year, date_from/date_to 중 최소 하나는 필요합니다.",
         )
 
     classes = list(DECISION_CLASSES) if type == "all" else [_DECISION_TYPE_CODE[type]]
     found = await search_documents(
         doc_classes=classes, query=merged, match=match, exclude=exclude,
-        tax_type_codes=codes, decision_result_codes=_resolve_decision_results(result),
+        tax_type_codes=codes, decision_result_codes=result_codes,
         attribution_year=attribution_year, date_from=date_from, date_to=date_to,
         sort=sort, page=page, limit=limit,
     )
@@ -578,6 +588,13 @@ async def search_taxlaw(
         if isinstance(value, dict):
             return any(has_hit(v) for v in value.values() if isinstance(v, dict))
         return False
+
+    if not any(has_hit(v) for v in results.values()) and errors:
+        raise NtsError(
+            ErrorCode.UPSTREAM_ERROR,
+            f"'{query}' 통합검색 중 하나 이상의 조회 영역이 실패했습니다.",
+            detail={"partialErrors": errors, "domainsSearched": targets},
+        )
 
     if not any(has_hit(v) for v in results.values()):
         raise not_found(

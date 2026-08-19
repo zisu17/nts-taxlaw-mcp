@@ -20,6 +20,7 @@ MCP 는 사용자에게 ``match: "all"|"any"`` 와 ``exclude: []`` 형태를 주
 from __future__ import annotations
 
 import re
+from datetime import date
 
 #: OR 연산자. ASCII 파이프다 — broken bar(¦, U+00A6)는 AND 로 동작하므로 쓰면 안 된다.
 OR_SEPARATOR = "|"
@@ -71,14 +72,16 @@ def to_site_date(value: str | None) -> str:
     """YYYY-MM-DD / YYYYMMDD → 사이트가 받는 YYYYMMDD. 빈 값은 빈 문자열."""
     if not value:
         return ""
-    digits = re.sub(r"\D", "", str(value))
-    if len(digits) == 8:
-        return digits
-    if len(digits) == 6:
-        return digits + "01"
-    if len(digits) == 4:
-        return digits + "0101"
-    return ""
+    raw = str(value).strip()
+    matched = re.fullmatch(r"(\d{4})(?:-?(\d{2})(?:-?(\d{2}))?)?", raw)
+    if not matched:
+        return ""
+    year, month, day = matched.group(1), matched.group(2) or "01", matched.group(3) or "01"
+    try:
+        date(int(year), int(month), int(day))
+    except ValueError:
+        return ""
+    return f"{year}{month}{day}"
 
 
 def format_date(value: object) -> str | None:

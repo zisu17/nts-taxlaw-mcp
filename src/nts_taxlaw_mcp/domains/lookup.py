@@ -56,18 +56,15 @@ async def lookup_by_document_number(
         searched.append(domain)
         for candidate in candidates:
             tried.append(f"{domain}:{candidate}")
-            try:
-                result = await search_documents(
-                    doc_classes=_CLASSES[domain],
-                    query=candidate,
-                    match="all",
-                    limit=30,
-                    sort="relevance",
-                )
-            except Exception:
-                # 한 후보의 실패가 전체 조회를 무너뜨리지 않게 한다. 마지막까지
-                # 아무것도 못 찾으면 아래에서 not-found 로 정리된다.
-                continue
+            # 후보 하나라도 조회에 실패하면 부존재를 확정할 수 없다. 장애를 삼키고
+            # NOT_FOUND 로 내리면 실재하는 문서를 없다고 답하게 되므로 그대로 전파한다.
+            result = await search_documents(
+                doc_classes=_CLASSES[domain],
+                query=candidate,
+                match="all",
+                limit=30,
+                sort="relevance",
+            )
 
             for item in result["items"]:
                 number = item.get("documentNumber", "")

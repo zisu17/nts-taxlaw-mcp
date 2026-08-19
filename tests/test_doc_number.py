@@ -62,6 +62,13 @@ def test_different_documents_never_match(other: str) -> None:
     assert not is_same_doc_number(other, TARGET)
 
 
+@pytest.mark.parametrize("suffix", ["호", "XYZ", "abc"])
+def test_arbitrary_serial_suffix_is_not_an_exact_match(suffix: str) -> None:
+    raw = f"{TARGET}{suffix}"
+    assert parse_doc_number(raw).structured is False
+    assert not is_same_doc_number(raw, TARGET)
+
+
 def test_layout_a_type_year_category_serial() -> None:
     p = parse_doc_number("서면-2026-법규재산-0119")
     assert (p.layout, p.type, p.year, p.category, p.serial) == ("A", "서면", "2026", "법규재산", "0119")
