@@ -1,49 +1,128 @@
-"""환경변수 설정. 모두 선택 항목이며 기본값만으로 동작한다."""
+"""환경변수 설정. 모두 선택 항목이며 기본값만으로 동작한다.
+
+이 서버는 서로 다른 두 기관의 공개 시스템을 조회한다. 그래서 설정도
+**공통값 + 사이트별 재정의** 두 층으로 둔다.
+
+    TAXLAW_*   ← 두 사이트에 공통 적용
+    NTS_*      ← 국세(국세청)만 재정의
+    OLTA_*     ← 지방세(한국지방세연구원)만 재정의
+
+우선순위는 **사이트별 > 공통 > 기본값**이다. 예를 들어 국세만 타임아웃을 늘리려면
+``NTS_TIMEOUT_MS`` 를, 양쪽 다 늘리려면 ``TAXLAW_TIMEOUT_MS`` 를 준다.
+
+이름과 적용 범위를 일치시키는 것이 요점이다. 이전에는 ``NTS_USER_AGENT`` 가 지방세
+요청에도 적용돼 이름만 보고는 범위를 알 수 없었다.
+"""
 
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 
-# 국세 — 국세청 국세법령정보시스템
+# ─── 출처 주소 (환경변수 대상 아님) ──────────────────────────────────────────
+
+#: 국세 — 국세청 국세법령정보시스템
 NTS_ORIGIN = "https://taxlaw.nts.go.kr"
 ACTION_URL = f"{NTS_ORIGIN}/action.do"
 
-# 지방세 — 한국지방세연구원(KILF) 지방세 법령정보시스템
+#: 지방세 — 한국지방세연구원(KILF) 지방세 법령정보시스템
 OLTA_ORIGIN = "https://www.olta.re.kr"
 
 
-def _int_env(name: str, default: int, *, minimum: int = 1) -> int:
-    raw = os.environ.get(name)
-    if not raw:
-        return default
-    try:
-        value = int(raw)
-    except ValueError:
-        return default
-    return value if value >= minimum else default
+# ─── 환경변수 읽기 ───────────────────────────────────────────────────────────
+
+def _env_int(*names: str, default: int, minimum: int = 1) -> int:
+    """앞선 이름이 우선한다. 사이트별 → 공통 순서로 넘긴다.
+
+    값이 숫자가 아니거나 최솟값보다 작으면 그 이름은 건너뛴다 — 잘못 준 값 때문에
+    서버가 못 뜨는 것보다 다음 후보나 기본값으로 도는 편이 낫다.
+    """
+    for name in names:
+        raw = os.environ.get(name)
+        if not raw:
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            continue
+        if value >= minimum:
+            return value
+    return default
 
 
-DEFAULT_USER_AGENT = os.environ.get(
-    "NTS_USER_AGENT",
+def _env_str(*names: str, default: str) -> str:
+    for name in names:
+        raw = os.environ.get(name)
+        if raw:
+            return raw
+    return default
+
+
+_DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
-TIMEOUT_SECONDS: float = _int_env("NTS_TIMEOUT_MS", 20_000) / 1000
-RETRIES: int = _int_env("NTS_RETRIES", 3, minimum=0)
-RETRY_BASE_SECONDS: float = 0.3
 
-RATE_PER_MIN: int = _int_env("NTS_RATE_PER_MIN", 60)
-RATE_BURST: int = _int_env("NTS_RATE_BURST", 20)
+# ─── 사이트별 설정 ───────────────────────────────────────────────────────────
 
-# 본문 응답 상한. 실측으로 심사청구 일부 문서의 본문 HTML 이 1.4MB 까지 나온다 —
-# 그대로 실으면 클라이언트 컨텍스트를 통째로 삼킨다.
-BODY_LIMIT: int = _int_env("NTS_BODY_LIMIT", 30_000, minimum=500)
+@dataclass(frozen=True, slots=True)
+class SiteConfig:
+    """한 출처에 대한 조회 정책.
 
-CACHE_MAX_ENTRIES: int = _int_env("NTS_CACHE_MAX", 600)
+    사이트마다 별도 객체를 두는 이유는 두 곳이 다른 기관의 서버라서다. 한쪽 조회가
+    다른 쪽의 요청 한도를 깎거나 타임아웃 정책을 끌고 가면 안 된다.
+    """
 
-# 지방세 사이트도 같은 타임아웃·재시도·한도 정책을 쓴다. 별도로 조절하려면
-# OLTA_* 환경변수를 준다.
-OLTA_TIMEOUT_SECONDS: float = _int_env("OLTA_TIMEOUT_MS", 20_000) / 1000
-OLTA_RATE_PER_MIN: int = _int_env("OLTA_RATE_PER_MIN", 60)
-OLTA_RATE_BURST: int = _int_env("OLTA_RATE_BURST", 20)
+    #: 로그·오류 메시지에 쓰는 이름
+    name: str
+    origin: str
+    timeout_seconds: float
+    retries: int
+    #: 지수 백오프 base. 업스트림 왕복(0.3~1초)을 대기가 압도하지 않는 값.
+    retry_base_seconds: float
+    rate_per_min: int
+    rate_burst: int
+    #: 본문 응답 상한(글자). 도구의 body_limit 인수가 없을 때 쓰는 기본값.
+    body_limit: int
+    user_agent: str
+
+
+def _site(name: str, origin: str, prefix: str, *, default_body_limit: int) -> SiteConfig:
+    """`<PREFIX>_*` → `TAXLAW_*` → 기본값 순으로 읽어 사이트 설정을 만든다."""
+    return SiteConfig(
+        name=name,
+        origin=origin,
+        timeout_seconds=_env_int(
+            f"{prefix}_TIMEOUT_MS", "TAXLAW_TIMEOUT_MS", default=20_000
+        ) / 1000,
+        retries=_env_int(f"{prefix}_RETRIES", "TAXLAW_RETRIES", default=3, minimum=0),
+        retry_base_seconds=_env_int(
+            f"{prefix}_RETRY_BASE_MS", "TAXLAW_RETRY_BASE_MS", default=300
+        ) / 1000,
+        rate_per_min=_env_int(f"{prefix}_RATE_PER_MIN", "TAXLAW_RATE_PER_MIN", default=60),
+        rate_burst=_env_int(f"{prefix}_RATE_BURST", "TAXLAW_RATE_BURST", default=20),
+        body_limit=_env_int(
+            f"{prefix}_BODY_LIMIT", "TAXLAW_BODY_LIMIT",
+            default=default_body_limit, minimum=500,
+        ),
+        user_agent=_env_str(f"{prefix}_USER_AGENT", "TAXLAW_USER_AGENT", default=_DEFAULT_USER_AGENT),
+    )
+
+
+#: 국세청. 본문이 최대 1.4MB(심사청구 일부)까지 나오므로 상한이 필요하다.
+NTS = _site("국세법령정보시스템", NTS_ORIGIN, "NTS", default_body_limit=30_000)
+
+#: 한국지방세연구원. 본문이 국세청보다 작지만 같은 기본값으로 둔다.
+OLTA = _site("지방세 법령정보시스템", OLTA_ORIGIN, "OLTA", default_body_limit=30_000)
+
+
+# ─── 공통 설정 ───────────────────────────────────────────────────────────────
+
+#: 캐시는 두 사이트가 **하나의 객체를 공유**한다(키에 출처를 담아 구분).
+#: 그래서 사이트별 재정의가 성립하지 않는다. `NTS_CACHE_MAX` 는 이전 이름 호환용.
+CACHE_MAX_ENTRIES: int = _env_int("TAXLAW_CACHE_MAX", "NTS_CACHE_MAX", default=600)
+
+#: :func:`korean_taxlaw_mcp.html_text.truncate` 가 호출자에게 상한을 못 받았을 때의
+#: 마지막 안전망. 정상 경로에서는 도메인 계층이 사이트별 `body_limit` 을 넘긴다.
+FALLBACK_BODY_LIMIT: int = min(NTS.body_limit, OLTA.body_limit)

@@ -297,15 +297,48 @@ Claude Code나 Codex를 사용할 수 없거나 직접 설치해야 한다면
 
 모든 항목은 선택 사항이며 기본값만으로 실행할 수 있습니다.
 
-| 변수 | 기본값 | 설명 |
-|---|---:|---|
-| `NTS_TIMEOUT_MS` | `20000` | 요청 타임아웃(ms) |
-| `NTS_RETRIES` | `3` | 재시도 횟수 |
-| `NTS_RATE_PER_MIN` | `60` | 분당 요청 한도 |
-| `NTS_RATE_BURST` | `20` | 버스트 허용량 |
-| `NTS_BODY_LIMIT` | `30000` | 본문 최대 글자수 |
-| `NTS_CACHE_MAX` | `600` | 캐시 최대 항목 수 |
-| `NTS_USER_AGENT` | Chrome UA | User-Agent |
+두 기관의 시스템을 조회하므로 설정도 **공통값 + 사이트별 재정의** 두 층입니다.
+우선순위는 **사이트별 > 공통 > 기본값** 입니다.
+
+| 접두 | 적용 범위 |
+|---|---|
+| `TAXLAW_*` | 국세·지방세 공통 |
+| `NTS_*` | 국세(국세청)만 재정의 |
+| `OLTA_*` | 지방세(한국지방세연구원)만 재정의 |
+
+| 항목 | 공통 | 국세 전용 | 지방세 전용 | 기본값 |
+|---|---|---|---|---:|
+| 요청 타임아웃(ms) | `TAXLAW_TIMEOUT_MS` | `NTS_TIMEOUT_MS` | `OLTA_TIMEOUT_MS` | `20000` |
+| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `3` |
+| 재시도 대기 base(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `300` |
+| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `60` |
+| 버스트 허용량 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `20` |
+| 본문 최대 글자수 | `TAXLAW_BODY_LIMIT` | `NTS_BODY_LIMIT` | `OLTA_BODY_LIMIT` | `30000` |
+| User-Agent | `TAXLAW_USER_AGENT` | `NTS_USER_AGENT` | `OLTA_USER_AGENT` | Chrome UA |
+| 캐시 최대 항목 수 | `TAXLAW_CACHE_MAX` | — | — | `600` |
+
+예시:
+
+```bash
+# 양쪽 다 타임아웃을 10초로
+TAXLAW_TIMEOUT_MS=10000
+
+# 공통 10초, 다만 국세청만 30초로 늘림
+TAXLAW_TIMEOUT_MS=10000
+NTS_TIMEOUT_MS=30000
+
+# 지방세 쪽 요청만 더 천천히
+OLTA_RATE_PER_MIN=20
+```
+
+**요청 한도는 사이트별로 따로 셉니다.** 두 곳이 다른 기관의 서버이므로 한쪽 조회가
+다른 쪽 한도를 깎지 않습니다.
+
+**캐시는 하나를 공유합니다.** 키에 출처를 담아 구분하므로 사이트별 재정의가 없습니다.
+이전 이름 `NTS_CACHE_MAX` 도 계속 동작합니다.
+
+잘못된 값(숫자가 아니거나 하한 미달)은 그 항목만 건너뛰고 다음 후보나 기본값을
+씁니다. 설정 오류로 서버가 뜨지 않는 일은 없습니다.
 
 ---
 

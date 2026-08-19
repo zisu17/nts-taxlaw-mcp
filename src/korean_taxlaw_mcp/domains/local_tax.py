@@ -26,7 +26,7 @@ from datetime import date
 from typing import Any
 
 from ..codes import LOCAL_TAX_TYPE
-from ..config import BODY_LIMIT
+from ..config import OLTA
 from ..errors import ErrorCode, NtsError, not_found
 from ..html_text import truncate
 from ..local_doc_number import is_same_local_doc_number, parse_local_doc_number
@@ -228,7 +228,7 @@ async def get_local_document(
             ["documentId 가 검색 결과에서 가져온 값인지 확인하세요."],
         )
 
-    limit = body_limit if body_limit is not None else BODY_LIMIT
+    limit = body_limit if body_limit is not None else OLTA.body_limit
     level = _AUTHORITY[kind]
     url = detail_url(kind, doc_id, relationship_num)
     # 법원 판례 상세 화면은 머리글에 문서번호를 싣지 않는다. 목록에서 읽은 값으로

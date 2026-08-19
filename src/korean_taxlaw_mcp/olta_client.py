@@ -34,20 +34,12 @@ from urllib.parse import urlencode
 import httpx
 
 from .cache import cache
-from .config import (
-    DEFAULT_USER_AGENT,
-    OLTA_ORIGIN,
-    OLTA_RATE_BURST,
-    OLTA_RATE_PER_MIN,
-    OLTA_TIMEOUT_SECONDS,
-    RETRIES,
-    RETRY_BASE_SECONDS,
-)
+from .config import OLTA, OLTA_ORIGIN
 from .errors import ErrorCode, NtsError, upstream
 from .rate_limit import TokenBucket
 
 #: 지방세 사이트는 국세청과 별개 호스트이므로 요청 한도도 따로 센다.
-olta_limiter = TokenBucket(OLTA_RATE_PER_MIN, OLTA_RATE_BURST)
+olta_limiter = TokenBucket(OLTA.rate_per_min, OLTA.rate_burst)
 
 _RETRY_STATUS = {429, 500, 502, 503, 504}
 
@@ -62,11 +54,11 @@ async def get_client() -> httpx.AsyncClient:
     async with _client_lock:
         if _client is None or _client.is_closed:
             _client = httpx.AsyncClient(
-                timeout=httpx.Timeout(OLTA_TIMEOUT_SECONDS),
+                timeout=httpx.Timeout(OLTA.timeout_seconds),
                 limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
                 follow_redirects=True,
                 headers={
-                    "user-agent": DEFAULT_USER_AGENT,
+                    "user-agent": OLTA.user_agent,
                     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                     "accept-language": "ko-KR,ko;q=0.9",
                 },
@@ -107,9 +99,9 @@ async def _request(
     headers = {"referer": url}
 
     last_error: BaseException | None = None
-    for attempt in range(RETRIES + 1):
+    for attempt in range(OLTA.retries + 1):
         if attempt:
-            await asyncio.sleep(RETRY_BASE_SECONDS * (2 ** (attempt - 1)))
+            await asyncio.sleep(OLTA.retry_base_seconds * (2 ** (attempt - 1)))
         try:
             response = await (
                 client.post(url, data=data, headers=headers)
@@ -119,18 +111,18 @@ async def _request(
         except httpx.TimeoutException:
             last_error = NtsError(
                 ErrorCode.TIMEOUT,
-                f"지방세 법령정보시스템 시간 초과 ({OLTA_TIMEOUT_SECONDS}s, {path}).",
+                f"지방세 법령정보시스템 시간 초과 ({OLTA.timeout_seconds}s, {path}).",
             )
-            if attempt >= RETRIES:
+            if attempt >= OLTA.retries:
                 break
             continue
         except httpx.HTTPError as exc:
             last_error = upstream(f"지방세 법령정보시스템 요청 실패 ({path}): {exc}", path=path)
-            if attempt >= RETRIES:
+            if attempt >= OLTA.retries:
                 break
             continue
 
-        if response.status_code in _RETRY_STATUS and attempt < RETRIES:
+        if response.status_code in _RETRY_STATUS and attempt < OLTA.retries:
             last_error = upstream(
                 f"지방세 법령정보시스템 HTTP {response.status_code}", path=path, status=response.status_code
             )
@@ -143,7 +135,7 @@ async def _request(
         text = response.text
         if not text.strip():
             last_error = upstream("지방세 법령정보시스템 응답 본문이 비어 있습니다.", path=path)
-            if attempt >= RETRIES:
+            if attempt >= OLTA.retries:
                 break
             continue
         return text

@@ -24,14 +24,7 @@ from typing import Any
 import httpx
 
 from .cache import cache
-from .config import (
-    ACTION_URL,
-    DEFAULT_USER_AGENT,
-    NTS_ORIGIN,
-    RETRIES,
-    RETRY_BASE_SECONDS,
-    TIMEOUT_SECONDS,
-)
+from .config import NTS, ACTION_URL, NTS_ORIGIN
 from .errors import ErrorCode, NtsError, upstream
 from .rate_limit import upstream_limiter
 
@@ -49,11 +42,11 @@ async def get_client() -> httpx.AsyncClient:
     async with _client_lock:
         if _client is None or _client.is_closed:
             _client = httpx.AsyncClient(
-                timeout=httpx.Timeout(TIMEOUT_SECONDS),
+                timeout=httpx.Timeout(NTS.timeout_seconds),
                 limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
                 follow_redirects=False,
                 headers={
-                    "user-agent": DEFAULT_USER_AGENT,
+                    "user-agent": NTS.user_agent,
                     "accept": "application/json, text/javascript, */*; q=0.01",
                     "accept-language": "ko-KR,ko;q=0.9",
                     "x-requested-with": "XMLHttpRequest",
@@ -84,9 +77,9 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
     body = {"actionId": action_id, "paramData": json.dumps(param_data, ensure_ascii=False)}
     last_error: BaseException | None = None
 
-    for attempt in range(RETRIES + 1):
+    for attempt in range(NTS.retries + 1):
         if attempt:
-            await asyncio.sleep(RETRY_BASE_SECONDS * (2 ** (attempt - 1)))
+            await asyncio.sleep(NTS.retry_base_seconds * (2 ** (attempt - 1)))
         try:
             response = await client.post(
                 ACTION_URL,
@@ -98,18 +91,18 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
             )
         except httpx.TimeoutException:
             last_error = NtsError(
-                ErrorCode.TIMEOUT, f"action.do 시간 초과 ({TIMEOUT_SECONDS}s, {action_id})."
+                ErrorCode.TIMEOUT, f"action.do 시간 초과 ({NTS.timeout_seconds}s, {action_id})."
             )
-            if attempt >= RETRIES:
+            if attempt >= NTS.retries:
                 break
             continue
         except httpx.HTTPError as exc:
             last_error = upstream(f"action.do 요청 실패 ({action_id}): {exc}", actionId=action_id)
-            if attempt >= RETRIES:
+            if attempt >= NTS.retries:
                 break
             continue
 
-        if response.status_code in _RETRY_STATUS and attempt < RETRIES:
+        if response.status_code in _RETRY_STATUS and attempt < NTS.retries:
             last_error = upstream(
                 f"action.do HTTP {response.status_code}", actionId=action_id, status=response.status_code
             )
@@ -123,14 +116,14 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
         # 점검·차단 페이지는 200 + HTML 로 온다. 빈 본문도 일시 장애로 본다.
         if not text.strip():
             last_error = upstream("action.do 응답 본문이 비어 있습니다.", actionId=action_id)
-            if attempt >= RETRIES:
+            if attempt >= NTS.retries:
                 break
             continue
         if text.lstrip().startswith("<"):
             last_error = upstream(
                 "action.do 가 JSON 대신 HTML 을 반환했습니다(점검·차단 가능).", actionId=action_id
             )
-            if attempt >= RETRIES:
+            if attempt >= NTS.retries:
                 break
             continue
 
