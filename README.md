@@ -1,8 +1,10 @@
-# nts-taxlaw-mcp
+# korean-taxlaw-mcp
 
-국세청 **국세법령정보시스템**(<https://taxlaw.nts.go.kr>) 원본을 직접 조회하는 MCP 서버입니다.
+한국 세법 자료를 출처별로 통합 조회하기 위한 MCP 서버입니다.
 
-Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치지 않고 국세청 자체 조회 엔드포인트를 사용합니다.
+현재는 국세청 **국세법령정보시스템**(<https://taxlaw.nts.go.kr>) 원본 조회를 지원하며,
+향후 지방세 자료를 별도 도메인으로 추가할 수 있도록 프로젝트 이름과 구조를 확장했습니다.
+Python과 FastMCP로 구현했습니다.
 
 - 최신 세법해석례 조회
 - 회신·판단·결론 등 상세 본문 구조화
@@ -10,7 +12,7 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 - 판례·결정례 및 행정 해석기준 검색
 - 출처와 근거 유형을 포함한 구조화 응답
 
-기존 `korean-law-mcp`는 법제처 OPEN API 특성상 국세청 해석례의 목록 검색은 가능하지만 상세 본문 조회에는 제한이 있습니다. `nts-taxlaw-mcp`는 국세청 원본을 직접 조회해 문서번호 검색과 상세 본문 조회를 제공합니다.
+기존 `korean-law-mcp`는 법제처 OPEN API 특성상 국세청 해석례의 목록 검색은 가능하지만 상세 본문 조회에는 제한이 있습니다. `korean-taxlaw-mcp`의 현재 국세 도메인은 법제처 미러(`ntsCgmExpc`)를 거치지 않고 국세청 원본을 직접 조회해 문서번호 검색과 상세 본문 조회를 제공합니다.
 
 ---
 
@@ -24,6 +26,14 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 | 행정 해석기준 | 세법집행기준 | O | - | 조항명·목차 |
 | 행정 해석기준 | 국세청 고시 206건, 훈령 143건 | O | - | 메타데이터 |
 | 별표·서식 | 법령서식 34,487건 | O | - | 메타데이터·파일 식별자 |
+
+### 확장 방향
+
+- 현재 지원 범위: 국세청 국세법령정보시스템의 국세 자료
+- 향후 지원 범위: 지방세 법령해석·심판례 등 지방세 자료
+- 확장 원칙: 국세와 지방세의 출처·문서 식별자·권위 수준을 섞지 않고 도메인별로 구분
+
+지방세 도메인이 구현되기 전까지 지방세 자료를 지원한다고 간주하지 않습니다.
 
 ### 수록 규모
 
@@ -61,7 +71,7 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 
 ## 2. 데이터 출처
 
-모든 데이터는 **국세청 국세법령정보시스템**에서 조회합니다.
+현재 제공되는 모든 데이터는 **국세청 국세법령정보시스템**에서 조회합니다.
 
 <https://taxlaw.nts.go.kr>
 
@@ -208,38 +218,38 @@ uv --version
 GitHub 주소에서 바로 설치할 수 있습니다.
 
 ```bash
-uv tool install git+<GitHub 주소>
+uv tool install git+https://github.com/zisu17/korean-taxlaw-mcp.git
 ```
 
-설치 후 `nts-taxlaw-mcp` 명령을 어느 경로에서든 실행할 수 있습니다.
+설치 후 `korean-taxlaw-mcp` 명령을 어느 경로에서든 실행할 수 있습니다.
 
 설치 위치 확인:
 
 ```powershell
-(Get-Command nts-taxlaw-mcp).Source
+(Get-Command korean-taxlaw-mcp).Source
 ```
 
 ```bash
-which nts-taxlaw-mcp
+which korean-taxlaw-mcp
 ```
 
 일반적인 설치 경로:
 
 | OS | 경로 |
 |---|---|
-| Windows | `C:\Users\<사용자>\.local\bin\nts-taxlaw-mcp.exe` |
-| macOS / Linux | `~/.local/bin/nts-taxlaw-mcp` |
+| Windows | `C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe` |
+| macOS / Linux | `~/.local/bin/korean-taxlaw-mcp` |
 
 업데이트:
 
 ```bash
-uv tool upgrade nts-taxlaw-mcp
+uv tool upgrade korean-taxlaw-mcp
 ```
 
 제거:
 
 ```bash
-uv tool uninstall nts-taxlaw-mcp
+uv tool uninstall korean-taxlaw-mcp
 ```
 
 ### 5.3 소스 설치
@@ -247,8 +257,8 @@ uv tool uninstall nts-taxlaw-mcp
 코드를 수정하거나 테스트를 실행할 경우 저장소를 내려받아 사용합니다.
 
 ```bash
-git clone <GitHub 주소>
-cd nts-taxlaw-mcp
+git clone https://github.com/zisu17/korean-taxlaw-mcp.git
+cd korean-taxlaw-mcp
 uv sync
 ```
 
@@ -265,13 +275,13 @@ git을 사용할 수 없는 환경에서는 GitHub의 **Code > Download ZIP**으
 동작 확인:
 
 ```bash
-uv run nts-taxlaw-mcp --help
+uv run korean-taxlaw-mcp --help
 uv run python scripts/compare_with_site.py
 ```
 
 ### 5.4 PATH 확인
 
-설치 직후 `uv` 또는 `nts-taxlaw-mcp` 명령을 찾지 못하면 터미널을 다시 연 뒤 확인합니다.
+설치 직후 `uv` 또는 `korean-taxlaw-mcp` 명령을 찾지 못하면 터미널을 다시 연 뒤 확인합니다.
 
 ```powershell
 uv tool update-shell
@@ -296,19 +306,19 @@ macOS / Linux:
 ### uv tool로 설치한 경우
 
 ```bash
-claude mcp add nts-taxlaw -- nts-taxlaw-mcp
+claude mcp add korean-taxlaw -- korean-taxlaw-mcp
 ```
 
 명령을 찾지 못하면 설치 경로를 확인한 뒤 절대경로를 지정합니다.
 
 ```powershell
-claude mcp add nts-taxlaw -- "C:\Users\<사용자>\.local\bin\nts-taxlaw-mcp.exe"
+claude mcp add korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
 ```
 
 ### 저장소에서 실행하는 경우
 
 ```bash
-claude mcp add nts-taxlaw -- uv run --directory /절대경로/nts-taxlaw-mcp nts-taxlaw-mcp
+claude mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
 ```
 
 등록 확인:
@@ -322,13 +332,13 @@ claude mcp list
 서버 실행:
 
 ```bash
-nts-taxlaw-mcp --http --port 8000
+korean-taxlaw-mcp --http --port 8000
 ```
 
 Claude Code 등록:
 
 ```bash
-claude mcp add --transport http nts-taxlaw http://127.0.0.1:8000/mcp
+claude mcp add --transport http korean-taxlaw http://127.0.0.1:8000/mcp
 ```
 
 ---
@@ -351,8 +361,8 @@ uv tool 설치:
 ```json
 {
   "mcpServers": {
-    "nts-taxlaw": {
-      "command": "C:\\Users\\<사용자>\\.local\\bin\\nts-taxlaw-mcp.exe"
+    "korean-taxlaw": {
+      "command": "C:\\Users\\<사용자>\\.local\\bin\\korean-taxlaw-mcp.exe"
     }
   }
 }
@@ -363,13 +373,13 @@ uv tool 설치:
 ```json
 {
   "mcpServers": {
-    "nts-taxlaw": {
+    "korean-taxlaw": {
       "command": "C:\\Users\\<사용자>\\.local\\bin\\uv.exe",
       "args": [
         "run",
         "--directory",
-        "C:\\Users\\<사용자>\\nts-taxlaw-mcp",
-        "nts-taxlaw-mcp"
+        "C:\\Users\\<사용자>\\korean-taxlaw-mcp",
+        "korean-taxlaw-mcp"
       ]
     }
   }
@@ -385,8 +395,8 @@ uv tool 설치:
 ```json
 {
   "mcpServers": {
-    "nts-taxlaw": {
-      "command": "/Users/<사용자>/.local/bin/nts-taxlaw-mcp"
+    "korean-taxlaw": {
+      "command": "/Users/<사용자>/.local/bin/korean-taxlaw-mcp"
     }
   }
 }
@@ -397,13 +407,13 @@ uv tool 설치:
 ```json
 {
   "mcpServers": {
-    "nts-taxlaw": {
+    "korean-taxlaw": {
       "command": "/Users/<사용자>/.local/bin/uv",
       "args": [
         "run",
         "--directory",
-        "/Users/<사용자>/nts-taxlaw-mcp",
-        "nts-taxlaw-mcp"
+        "/Users/<사용자>/korean-taxlaw-mcp",
+        "korean-taxlaw-mcp"
       ]
     }
   }
@@ -413,16 +423,16 @@ uv tool 설치:
 실제 경로는 다음 명령으로 확인합니다.
 
 ```powershell
-(Get-Command nts-taxlaw-mcp).Source
+(Get-Command korean-taxlaw-mcp).Source
 ```
 
 ```bash
-which nts-taxlaw-mcp
+which korean-taxlaw-mcp
 ```
 
 ### korean-law-mcp와 함께 사용
 
-법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는 `nts-taxlaw-mcp`에서 조회하는 구성을 권장합니다.
+법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는 `korean-taxlaw-mcp`에서 조회하는 구성을 권장합니다.
 
 ```json
 {
@@ -434,8 +444,8 @@ which nts-taxlaw-mcp
         "LAW_OC": "발급받은-인증키"
       }
     },
-    "nts-taxlaw": {
-      "command": "C:\\Users\\<사용자>\\.local\\bin\\nts-taxlaw-mcp.exe"
+    "korean-taxlaw": {
+      "command": "C:\\Users\\<사용자>\\.local\\bin\\korean-taxlaw-mcp.exe"
     }
   }
 }
@@ -446,14 +456,14 @@ which nts-taxlaw-mcp
 uv를 사용할 수 없는 환경에서는 Python 3.11 이상을 직접 설치해 기존 방식으로 실행할 수 있습니다.
 
 ```bash
-git clone <GitHub 주소>
-cd nts-taxlaw-mcp
+git clone https://github.com/zisu17/korean-taxlaw-mcp.git
+cd korean-taxlaw-mcp
 
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
-python -m nts_taxlaw_mcp --help
+python -m korean_taxlaw_mcp --help
 ```
 
 Windows 가상환경 활성화:
@@ -467,9 +477,9 @@ Claude Desktop에는 가상환경의 Python 절대경로를 지정합니다.
 ```json
 {
   "mcpServers": {
-    "nts-taxlaw": {
-      "command": "/절대경로/nts-taxlaw-mcp/.venv/bin/python",
-      "args": ["-m", "nts_taxlaw_mcp"]
+    "korean-taxlaw": {
+      "command": "/절대경로/korean-taxlaw-mcp/.venv/bin/python",
+      "args": ["-m", "korean_taxlaw_mcp"]
     }
   }
 }

@@ -698,7 +698,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nts-taxlaw-mcp"
+name = "korean-taxlaw-mcp"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [

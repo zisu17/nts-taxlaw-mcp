@@ -15,8 +15,8 @@ import asyncio
 import json
 import sys
 
-from nts_taxlaw_mcp.action_client import call_action, close_client
-from nts_taxlaw_mcp.codes import (
+from korean_taxlaw_mcp.action_client import call_action, close_client
+from korean_taxlaw_mcp.codes import (
     CASE_KIND,
     DECISION_RESULT,
     DISCLOSURE,
