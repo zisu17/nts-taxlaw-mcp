@@ -1,0 +1,33 @@
+name: Live upstream tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 21 * * 2" # 매주 수요일 06:00 KST
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-upstream-tests
+  cancel-in-progress: false
+
+jobs:
+  live-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+      - name: Run tests against the NTS service
+        env:
+          NTS_LIVE: "1"
+        run: uv run pytest -q tests/test_live.py
