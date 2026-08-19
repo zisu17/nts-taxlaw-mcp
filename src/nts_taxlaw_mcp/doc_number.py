@@ -237,7 +237,7 @@ def parse_doc_number(raw: str | None) -> ParsedDocNumber:
 
     tail = parts[-1]
     serials = [x.strip() for x in tail.split(",") if x.strip()]
-    if not serials or not re.match(r"^\d+", serials[0]):
+    if not serials or any(not re.fullmatch(r"\d+", value) for value in serials):
         return fallback()
     serial = serials[0]
 

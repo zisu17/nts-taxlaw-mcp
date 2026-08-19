@@ -129,12 +129,27 @@ async def search_documents(
     include, excluded = build_vocab(query, match, exclude)
     sort_name = sort or ("relevance" if include else "latest")
 
+    start_date = to_site_date(date_from)
+    end_date = to_site_date(date_to)
+    if date_from and not start_date:
+        raise NtsError(
+            ErrorCode.INVALID_INPUT,
+            f"date_from 형식이 올바르지 않습니다: {date_from}",
+            hints=["YYYY, YYYY-MM, YYYY-MM-DD 또는 구분자 없는 숫자 형식을 사용하세요."],
+        )
+    if date_to and not end_date:
+        raise NtsError(
+            ErrorCode.INVALID_INPUT,
+            f"date_to 형식이 올바르지 않습니다: {date_to}",
+            hints=["YYYY, YYYY-MM, YYYY-MM-DD 또는 구분자 없는 숫자 형식을 사용하세요."],
+        )
+
     param: dict[str, Any] = {
         "startCount": page,
         "viewCount": limit,
         "schDtBase": "FRS_RGT_DTM" if date_basis == "firstRegistration" else "DCM_RGT_DTM",
-        "bltnStrtDt": to_site_date(date_from),
-        "bltnEndDt": to_site_date(date_to),
+        "bltnStrtDt": start_date,
+        "bltnEndDt": end_date,
         "collectionName": next(iter(collections)),
         "dcmClCdCtl": _to_dcm_cl_cd_ctl(classes),
         "icldVcbCtl": include,

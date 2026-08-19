@@ -244,6 +244,28 @@ async def test_decision_result_filter_is_translated_to_codes(upstream) -> None:
     assert set(param["prtsDcsTypeClCtl_2"]) == {"10", "12"}
 
 
+async def test_decision_result_can_be_the_only_search_condition(upstream) -> None:
+    upstream.default_search = "search_review"
+    label, _data = await call("search_tax_decisions", {"result": ["기각"]})
+    assert label == "OK"
+    _action, param = upstream.calls[-1]
+    assert param["prtsDcsTypeClCtl_2"] == ["05"]
+
+
+async def test_unknown_decision_result_is_invalid_input(upstream) -> None:
+    label, data = await call("search_tax_decisions", {"query": "상속", "result": ["승소"]})
+    assert label == "INVALID_INPUT"
+    assert "승소" in data["error"]["message"]
+    assert upstream.calls == []
+
+
+async def test_invalid_date_does_not_fall_back_to_unfiltered_search(upstream) -> None:
+    label, data = await call("search_tax_interpretations", {"date_from": "not-a-date"})
+    assert label == "INVALID_INPUT"
+    assert data["error"]["code"] == "INVALID_INPUT"
+    assert upstream.calls == []
+
+
 async def test_search_with_no_criteria_is_rejected(upstream) -> None:
     label, data = await call("search_tax_interpretations", {})
     assert label == "INVALID_INPUT"
@@ -382,6 +404,28 @@ async def test_upstream_failure_is_not_reported_as_missing_data() -> None:
     assert label == "UPSTREAM_ERROR"
     assert data["error"]["code"] == "UPSTREAM_ERROR"
     assert "부존재로 단정하지 말고" in data["guardrail"]
+    await close_client()
+
+
+async def test_exact_lookup_upstream_failure_is_not_reported_as_not_found() -> None:
+    cache.clear()
+    with respx.mock(assert_all_called=False) as mock:
+        mock.post(ACTION_URL).mock(return_value=httpx.Response(503, text="down"))
+        label, data = await call(
+            "lookup_tax_document", {"document_number": "서면-2026-법규재산-0119"}
+        )
+    assert label == "UPSTREAM_ERROR"
+    assert data["error"]["code"] == "UPSTREAM_ERROR"
+    await close_client()
+
+
+async def test_integrated_search_all_failures_are_not_reported_as_not_found() -> None:
+    cache.clear()
+    with respx.mock(assert_all_called=False) as mock:
+        mock.post(ACTION_URL).mock(return_value=httpx.Response(503, text="down"))
+        label, data = await call("search_taxlaw", {"query": "상속 공동상속주택"})
+    assert label == "UPSTREAM_ERROR"
+    assert data["error"]["code"] == "UPSTREAM_ERROR"
     await close_client()
 
 
