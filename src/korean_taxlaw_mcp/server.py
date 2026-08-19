@@ -33,6 +33,14 @@ from .domains.guidance import (
     get_execution_standards,
     search_guidance,
 )
+from .domains.local_tax import (
+    DECISION_KINDS as LOCAL_DECISION_KINDS,
+    INTERPRETATION_KINDS as LOCAL_INTERPRETATION_KINDS,
+    get_local_document,
+    lookup_local_by_document_number,
+    resolve_tax_codes as resolve_local_tax_codes,
+    search_local_documents,
+)
 from .domains.lookup import lookup_by_document_number
 from .errors import ErrorCode, NtsError, not_found
 from .research import tax_research as run_tax_research
@@ -42,10 +50,15 @@ mcp = FastMCP(
     name=SERVER_NAME,
     version=__version__,
     instructions=(
-        "국세청 국세법령정보시스템(taxlaw.nts.go.kr) 원본을 직접 조회하는 서버입니다. "
-        "국세청 고유 자료(예규·불복결정례·기본통칙·집행기준·고시·훈령·서식)만 담당하고, "
+        "한국 세법 자료를 출처 원본에서 직접 조회하는 서버입니다. 두 층을 담당합니다.\n"
+        "· 국세 — 국세청 국세법령정보시스템(taxlaw.nts.go.kr): 예규·불복결정례·기본통칙·"
+        "집행기준·고시·훈령·서식. 도구는 search_tax_* / lookup_tax_document.\n"
+        "· 지방세 — 한국지방세연구원 지방세 법령정보시스템(olta.re.kr): 행정안전부 유권해석, "
+        "조세심판원·감사원·법원·헌재 결정례. 도구는 search_local_tax_* / lookup_local_tax_document.\n"
+        "취득세·재산세·자동차세·주민세·지방소득세·등록면허세 등은 **지방세**이므로 "
+        "search_local_tax_* 를 쓰고, 양도소득세·법인세·부가가치세·상속증여세 등은 국세 도구를 씁니다.\n"
         "법률·시행령·시행규칙 본문은 다루지 않습니다(법제처 기반 korean-law-mcp 사용). "
-        "문서번호를 알고 있으면 항상 lookup_tax_document 를 먼저 쓰세요. "
+        "문서번호를 알고 있으면 항상 lookup 도구를 먼저 쓰세요. "
         "조회 결과에 없는 내용은 절대 추측·생성하지 마세요."
     ),
 )
@@ -654,6 +667,197 @@ async def tax_research(
     return _ok(outcome)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 지방세 (한국지방세연구원 지방세 법령정보시스템)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_LOCAL_NOTE = (
+    "지방세 자료는 한국지방세연구원(KILF) 지방세 법령정보시스템이 출처입니다. "
+    "국세청 자료가 아니며, 취득세·재산세·자동차세·지방소득세 등 지방세만 담습니다."
+)
+
+
+@mcp.tool(
+    name="search_local_tax_interpretations",
+    description=(
+        "지방세 유권해석을 검색한다. 취득세·등록면허세·재산세·자동차세·주민세·지방소득세·"
+        "지역자원시설세·지방교육세·담배소비세 등 **지방세** 사안이 대상이다. "
+        "행정안전부 유권해석(지방세 예규)과 법제처 유권해석을 조회한다 — 국세청 예규의 "
+        "지방세 대응물이다. 문서번호(예: '부동산세제과-1794')를 주면 exact lookup 으로 처리된다. "
+        "국세(양도소득세·법인세·부가가치세 등)는 search_tax_interpretations 를 쓸 것."
+    ),
+)
+@_envelope_errors
+async def search_local_tax_interpretations(
+    query: Annotated[str | None, Field(description="검색 키워드. 연산자 지원: '&'(AND) '|'(OR) '!'(NOT) '[구문]'")] = None,
+    document_number: Annotated[str | None, Field(description="문서번호. 주면 exact lookup 을 수행한다.")] = None,
+    type: Annotated[
+        Literal["all", "mois", "moleg"],
+        Field(description="all(기본) | mois(행정안전부 유권해석) | moleg(법제처 유권해석)"),
+    ] = "all",
+    tax_type: Annotated[str | list[str] | None, Field(description="지방세 세목. 이름·별칭·코드 허용(취득세, 재산세, 11100 …)")] = None,
+    date_from: Annotated[str | None, Field(description="등록일 시작 (YYYY-MM-DD)")] = None,
+    date_to: Annotated[str | None, Field(description="등록일 종료 (YYYY-MM-DD)")] = None,
+    page: Annotated[int, Field(ge=1, description="페이지 번호(1부터). 한 페이지 10건.")] = 1,
+    limit: Annotated[int, Field(ge=1, le=50, description="반환 개수")] = 10,
+) -> str:
+    if document_number and document_number.strip():
+        return await lookup_local_tax_document(document_number=document_number)
+
+    kinds = (
+        list(LOCAL_INTERPRETATION_KINDS)
+        if type == "all"
+        else (["interpretation"] if type == "mois" else ["moleg"])
+    )
+    codes, unresolved = resolve_local_tax_codes(tax_type)
+    if not query and not codes and not date_from and not date_to:
+        raise NtsError(
+            ErrorCode.INVALID_INPUT,
+            "query, tax_type, date_from/date_to 중 최소 하나는 필요합니다.",
+            hints=["문서번호로 찾으려면 document_number 를 쓰거나 lookup_local_tax_document 를 호출하세요."],
+        )
+
+    result = await search_local_documents(
+        kinds=kinds, query=query, tax_type_codes=codes,
+        date_from=date_from, date_to=date_to, page=page, limit=limit,
+    )
+    if not result["items"]:
+        raise not_found(
+            f"지방세 유권해석 검색 결과가 없습니다 (query={query!r}).",
+            [
+                "키워드를 줄이세요.",
+                "'검색어1|검색어2' 로 OR 검색을 할 수 있습니다.",
+                *([f"인식하지 못한 세목: {', '.join(unresolved)}"] if unresolved else []),
+            ],
+        )
+    payload: dict[str, Any] = {"taxLevel": "local", "domain": "interpretation", **result, "note": _LOCAL_NOTE}
+    if unresolved:
+        payload["unresolvedTaxTypes"] = unresolved
+    return _ok(payload)
+
+
+@mcp.tool(
+    name="search_local_tax_decisions",
+    description=(
+        "지방세 불복 결정례·판례를 검색한다. 조세심판원 심판결정례, 감사원 심사결정례, "
+        "법원 판례, 헌법재판소 결정례 중 **지방세** 사안이 대상이다. "
+        "취득세·재산세 등 지방세 쟁점의 심판례·판례를 찾을 때 쓴다. "
+        "국세 사안은 search_tax_decisions 를 쓸 것."
+    ),
+)
+@_envelope_errors
+async def search_local_tax_decisions(
+    query: Annotated[str | None, Field(description="검색 키워드. 연산자 지원: '&' '|' '!' '[구문]'")] = None,
+    case_number: Annotated[str | None, Field(description="사건번호/문서번호. 주면 exact lookup 을 수행한다.")] = None,
+    type: Annotated[
+        Literal["all", "tribunal", "audit", "court", "constitutional"],
+        Field(description="all(기본) | tribunal(조세심판원) | audit(감사원) | court(법원 판례) | constitutional(헌재)"),
+    ] = "all",
+    tax_type: Annotated[str | list[str] | None, Field(description="지방세 세목")] = None,
+    date_from: Annotated[str | None, Field(description="등록일 시작")] = None,
+    date_to: Annotated[str | None, Field(description="등록일 종료")] = None,
+    page: Annotated[int, Field(ge=1)] = 1,
+    limit: Annotated[int, Field(ge=1, le=50)] = 10,
+) -> str:
+    if case_number and case_number.strip():
+        return await lookup_local_tax_document(document_number=case_number)
+
+    kinds = list(LOCAL_DECISION_KINDS) if type == "all" else [type]
+    codes, unresolved = resolve_local_tax_codes(tax_type)
+    if not query and not codes and not date_from and not date_to:
+        raise NtsError(
+            ErrorCode.INVALID_INPUT, "query, tax_type, date_from/date_to 중 최소 하나는 필요합니다."
+        )
+
+    result = await search_local_documents(
+        kinds=kinds, query=query, tax_type_codes=codes,
+        date_from=date_from, date_to=date_to, page=page, limit=limit,
+    )
+    if not result["items"]:
+        raise not_found(
+            f"지방세 판례·결정례 검색 결과가 없습니다 (query={query!r}).",
+            [
+                "키워드를 줄이거나 '검색어1|검색어2' 로 OR 검색을 시도하세요.",
+                *([f"인식하지 못한 세목: {', '.join(unresolved)}"] if unresolved else []),
+            ],
+        )
+    payload: dict[str, Any] = {"taxLevel": "local", "domain": "decision", **result, "note": _LOCAL_NOTE}
+    if unresolved:
+        payload["unresolvedTaxTypes"] = unresolved
+    return _ok(payload)
+
+
+@mcp.tool(
+    name="lookup_local_tax_document",
+    description=(
+        "지방세 문서를 문서번호 또는 문서 ID 로 조회해 본문까지 반환한다. "
+        "문서번호는 '부동산세제과-1794(2026.6.9.)호', '부동산세제과-1794', '부동산세제과 1794' 처럼 "
+        "표기가 달라도 같은 문서로 정규화한다. "
+        "**정확히 일치하는 문서만** 반환하며, 없으면 NOT_FOUND 와 함께 일련번호가 겹치는 문서를 "
+        "similarDocuments 로 분리해 준다(정답 아님). "
+        "사이트의 문서번호 검색은 일련번호 부분일치라서 '924' 는 '지방세정팀-2924' 도 함께 잡는다 — "
+        "그래서 부서명까지 일치해야 exact 로 인정한다."
+    ),
+)
+@_envelope_errors
+async def lookup_local_tax_document(
+    document_number: Annotated[str | None, Field(description="지방세 문서번호(예: 부동산세제과-1794)")] = None,
+    document_id: Annotated[str | None, Field(description="사이트 내부 문서 ID(검색 결과의 documentId)")] = None,
+    relationship_num: Annotated[str | None, Field(description="법원 판례 전용 보조 ID(검색 결과의 relationshipNum)")] = None,
+    kind: Annotated[
+        Literal["interpretation", "moleg", "tribunal", "audit", "court", "constitutional"] | None,
+        Field(description="자료 종류. document_id 를 줄 때는 필수. 생략하면 전 종류를 순차 조회."),
+    ] = None,
+    include_full_text: Annotated[bool, Field(description="본문 전문 포함 여부")] = True,
+    body_limit: Annotated[int | None, Field(ge=500, le=200_000)] = None,
+) -> str:
+    if document_id and document_id.strip():
+        if not kind:
+            raise NtsError(
+                ErrorCode.INVALID_INPUT,
+                "document_id 로 조회할 때는 kind 도 필요합니다.",
+                hints=["검색 결과의 kind 값을 그대로 넘기세요."],
+            )
+        document = await get_local_document(
+            kind, document_id.strip(), relationship_num=relationship_num,
+            include_full_text=include_full_text, body_limit=body_limit,
+        )
+        return _ok({"document": document, "note": _LOCAL_NOTE})
+
+    if not (document_number and document_number.strip()):
+        raise NtsError(ErrorCode.INVALID_INPUT, "document_number 또는 document_id 중 하나는 필요합니다.")
+
+    outcome = await lookup_local_by_document_number(
+        document_number,
+        kinds=[kind] if kind else None,
+        include_full_text=include_full_text,
+        body_limit=body_limit,
+    )
+    if outcome["found"]:
+        return _ok({"input": document_number, "note": _LOCAL_NOTE, **outcome})
+
+    raise NtsError(
+        ErrorCode.NOT_FOUND,
+        f"문서번호 '{document_number}' 와 정확히 일치하는 지방세 문서를 찾지 못했습니다.",
+        hints=[
+            "문서번호 표기를 원문 그대로 다시 확인하세요(부서명 + 일련번호).",
+            "키워드로 찾으려면 search_local_tax_interpretations 를 쓰세요.",
+            *(
+                ["아래 similarDocuments 는 일련번호가 겹치는 별개 문서이며 요청한 문서가 아닙니다."]
+                if outcome.get("similarDocuments")
+                else []
+            ),
+        ],
+        detail={
+            "normalizedDocumentNumber": outcome["normalizedDocumentNumber"],
+            "inputInterpretation": outcome["inputInterpretation"],
+            "exactMatch": False,
+            "similarDocuments": outcome.get("similarDocuments", []),
+            "triedQueries": outcome["triedQueries"],
+        },
+    )
+
+
 TOOL_NAMES = [
     "lookup_tax_document",
     "search_tax_interpretations",
@@ -664,4 +868,7 @@ TOOL_NAMES = [
     "search_tax_forms",
     "search_taxlaw",
     "tax_research",
+    "search_local_tax_interpretations",
+    "search_local_tax_decisions",
+    "lookup_local_tax_document",
 ]

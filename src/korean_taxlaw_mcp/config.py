@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import os
 
+# 국세 — 국세청 국세법령정보시스템
 NTS_ORIGIN = "https://taxlaw.nts.go.kr"
 ACTION_URL = f"{NTS_ORIGIN}/action.do"
+
+# 지방세 — 한국지방세연구원(KILF) 지방세 법령정보시스템
+OLTA_ORIGIN = "https://www.olta.re.kr"
 
 
 def _int_env(name: str, default: int, *, minimum: int = 1) -> int:
@@ -37,3 +41,9 @@ RATE_BURST: int = _int_env("NTS_RATE_BURST", 20)
 BODY_LIMIT: int = _int_env("NTS_BODY_LIMIT", 30_000, minimum=500)
 
 CACHE_MAX_ENTRIES: int = _int_env("NTS_CACHE_MAX", 600)
+
+# 지방세 사이트도 같은 타임아웃·재시도·한도 정책을 쓴다. 별도로 조절하려면
+# OLTA_* 환경변수를 준다.
+OLTA_TIMEOUT_SECONDS: float = _int_env("OLTA_TIMEOUT_MS", 20_000) / 1000
+OLTA_RATE_PER_MIN: int = _int_env("OLTA_RATE_PER_MIN", 60)
+OLTA_RATE_BURST: int = _int_env("OLTA_RATE_BURST", 20)

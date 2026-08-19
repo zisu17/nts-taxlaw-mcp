@@ -269,3 +269,140 @@ async def test_tax_research_live() -> None:
     assert layers["국세청 해석례"]["total"] > 0
     # 판단을 만들지 않는다는 경고가 실려야 한다
     assert "법률적 판단" in data["disclaimer"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 지방세 (한국지방세연구원 지방세 법령정보시스템)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+async def _close_olta():
+    yield
+    from korean_taxlaw_mcp.olta_client import close_client as close_olta
+
+    await close_olta()
+
+
+LOCAL_KINDS = ["interpretation", "moleg", "tribunal", "audit", "court", "constitutional"]
+
+
+@pytest.mark.parametrize("kind", LOCAL_KINDS)
+async def test_local_every_source_is_reachable(kind: str) -> None:
+    """6종 전부 검색이 되고 행이 파싱돼야 한다.
+
+    menuNo 누락 시 법원 판례가 500 을 내는 등 종류별 함정이 있어 전부 확인한다.
+    """
+    from korean_taxlaw_mcp.domains.local_tax import search_local_documents
+
+    result = await search_local_documents(kinds=[kind], query="취득세", limit=5)
+    assert result["total"] > 0, f"{kind}: 0건"
+    assert result["items"], f"{kind}: 행 파싱 실패"
+    assert all(item["documentNumber"] for item in result["items"])
+
+
+async def test_local_tax_filter_actually_filters() -> None:
+    """세목 필터는 `taxTitleStr` 로만 걸린다. 체크박스 이름을 보내면 무동작이다.
+
+    부분합이 합계와 맞는지로 필터가 실제로 동작하는지 확인한다.
+    """
+    from korean_taxlaw_mcp.domains.local_tax import search_local_documents
+
+    async def total(codes: list[str] | None) -> int:
+        result = await search_local_documents(
+            kinds=["interpretation"], query="신탁", tax_type_codes=codes, limit=1
+        )
+        return result["total"]
+
+    acquisition = await total(["11100"])   # 취득세
+    property_tax = await total(["24000"])  # 재산세
+    both = await total(["11100", "24000"])
+    assert acquisition > 0 and property_tax > 0
+    assert both == acquisition + property_tax, f"{both} != {acquisition}+{property_tax}"
+
+
+async def test_local_search_operators_behave_as_documented() -> None:
+    """공백=AND, `|`=OR, `!`=NOT. 문서와 어긋나면 검색이 조용히 틀린다."""
+    from korean_taxlaw_mcp.domains.local_tax import search_local_documents
+
+    async def total(query: str) -> int:
+        result = await search_local_documents(kinds=["interpretation"], query=query, limit=1)
+        return result["total"]
+
+    a = await total("취득세")
+    b = await total("신탁")
+    both_and = await total("취득세 신탁")
+    explicit_and = await total("취득세&신탁")
+    both_or = await total("취득세|신탁")
+
+    assert both_and == explicit_and, "공백이 AND 가 아니다"
+    assert both_and < min(a, b), "AND 가 교집합이 아니다"
+    assert both_or > max(a, b), "OR 가 합집합이 아니다"
+
+
+async def test_local_exact_document_number_lookup() -> None:
+    from korean_taxlaw_mcp.domains.local_tax import lookup_local_by_document_number
+
+    for raw in ["부동산세제과-1794(2026.6.9.)호", "부동산세제과-1794", "부동산세제과 1794"]:
+        outcome = await lookup_local_by_document_number(
+            raw, kinds=["interpretation"], include_full_text=False, body_limit=1000
+        )
+        assert outcome["found"] is True, raw
+        assert outcome["exactMatch"] is True, raw
+        document = outcome["document"]
+        assert document["documentNumber"].startswith("부동산세제과-1794")
+        assert document["authorityLevel"] == "local_ruling"
+        assert document["citation"]["sourceSystem"] == "지방세 법령정보시스템"
+
+
+async def test_local_partial_serial_is_never_answered_as_exact() -> None:
+    """`924` 는 사이트가 `4924`·`2924` 까지 준다. exact 로 답하면 오답이다."""
+    from korean_taxlaw_mcp.domains.local_tax import lookup_local_by_document_number
+
+    outcome = await lookup_local_by_document_number(
+        "924", kinds=["interpretation"], include_full_text=False
+    )
+    assert outcome["found"] is False
+    assert outcome["exactMatch"] is False
+    assert "document" not in outcome
+    assert outcome["similarDocuments"], "유사문서가 있어야 한다"
+
+
+@pytest.mark.parametrize("kind", LOCAL_KINDS)
+async def test_local_list_to_detail_round_trip(kind: str) -> None:
+    """목록에서 얻은 ID 로 상세가 실제로 열려야 한다.
+
+    법원 판례는 `relationshipNum` 과 `srchWrd` 가 함께 가야 열린다(없으면 500).
+    """
+    from korean_taxlaw_mcp.domains.local_tax import get_local_document, search_local_documents
+
+    result = await search_local_documents(kinds=[kind], query="취득세", limit=1)
+    assert result["items"], kind
+    row = result["items"][0]
+    document = await get_local_document(
+        kind,
+        row["documentId"],
+        relationship_num=row.get("relationshipNum"),
+        fallback_document_number=row.get("documentNumber"),
+        body_limit=2000,
+    )
+    assert document["documentNumber"], kind
+    assert document.get("fullText"), f"{kind}: 본문 없음"
+    assert document["sourceUrl"].startswith("https://www.olta.re.kr/")
+
+
+async def test_local_tools_via_mcp_client() -> None:
+    """지방세 도구가 MCP 경로로 동작하는지."""
+    label, data = await call(
+        "search_local_tax_interpretations", {"query": "신탁", "tax_type": "취득세", "limit": 3}
+    )
+    assert label == "OK", data
+    assert data["taxLevel"] == "local"
+    assert data["items"]
+    assert all(item["authorityLevel"] == "local_ruling" for item in data["items"])
+
+    label, data = await call("lookup_local_tax_document", {"document_number": "924"})
+    assert label == "NOT_FOUND"
+    assert data["error"]["detail"]["exactMatch"] is False
+    assert data["error"]["detail"]["similarDocuments"]
+    assert "추측" in data["guardrail"]
