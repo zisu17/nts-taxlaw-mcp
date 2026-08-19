@@ -1,8 +1,10 @@
-# nts-taxlaw-mcp
+# korean-taxlaw-mcp
 
-국세청 **국세법령정보시스템**(<https://taxlaw.nts.go.kr>) 원본을 직접 조회하는 MCP 서버입니다.
+한국 세법 자료를 출처별로 통합 조회하기 위한 MCP 서버입니다.
 
-Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치지 않고 국세청 자체 조회 엔드포인트를 사용합니다.
+현재는 국세청 **국세법령정보시스템**(<https://taxlaw.nts.go.kr>) 원본 조회를 지원하며,
+향후 지방세 자료를 별도 도메인으로 추가할 수 있도록 프로젝트 이름과 구조를 확장했습니다.
+Python과 FastMCP로 구현했습니다.
 
 - 최신 세법해석례 조회
 - 회신·판단·결론 등 상세 본문 구조화
@@ -10,7 +12,7 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 - 판례·결정례 및 행정 해석기준 검색
 - 출처와 근거 유형을 포함한 구조화 응답
 
-기존 `korean-law-mcp`는 법제처 OPEN API 특성상 국세청 해석례의 목록 검색은 가능하지만 상세 본문 조회에는 제한이 있습니다. `nts-taxlaw-mcp`는 국세청 원본을 직접 조회해 문서번호 검색과 상세 본문 조회를 제공합니다.
+기존 `korean-law-mcp`는 법제처 OPEN API 특성상 국세청 해석례의 목록 검색은 가능하지만 상세 본문 조회에는 제한이 있습니다. `korean-taxlaw-mcp`의 현재 국세 도메인은 법제처 미러(`ntsCgmExpc`)를 거치지 않고 국세청 원본을 직접 조회해 문서번호 검색과 상세 본문 조회를 제공합니다.
 
 ---
 
@@ -24,6 +26,14 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 | 행정 해석기준 | 세법집행기준 | O | - | 조항명·목차 |
 | 행정 해석기준 | 국세청 고시 206건, 훈령 143건 | O | - | 메타데이터 |
 | 별표·서식 | 법령서식 34,487건 | O | - | 메타데이터·파일 식별자 |
+
+### 확장 방향
+
+- 현재 지원 범위: 국세청 국세법령정보시스템의 국세 자료
+- 향후 지원 범위: 지방세 법령해석·심판례 등 지방세 자료
+- 확장 원칙: 국세와 지방세의 출처·문서 식별자·권위 수준을 섞지 않고 도메인별로 구분
+
+지방세 도메인이 구현되기 전까지 지방세 자료를 지원한다고 간주하지 않습니다.
 
 ### 수록 규모
 
@@ -61,7 +71,7 @@ Python과 FastMCP로 구현했으며, 법제처 미러(`ntsCgmExpc`)를 거치�
 
 ## 2. 데이터 출처
 
-모든 데이터는 **국세청 국세법령정보시스템**에서 조회합니다.
+현재 제공되는 모든 데이터는 **국세청 국세법령정보시스템**에서 조회합니다.
 
 <https://taxlaw.nts.go.kr>
 
@@ -171,309 +181,64 @@ MCP에서는 다음과 같이 사용합니다.
 
 ---
 
-## 5. 설치
+## 5. 가장 쉬운 설치
 
-Python을 직접 설치하거나 가상환경을 수동으로 만들 필요는 없습니다. [uv](https://docs.astral.sh/uv/)가 필요한 Python과 패키지를 관리합니다.
+개발 도구나 Python을 직접 설정할 필요 없이 Claude Code에 설치를 맡기는 방법입니다.
 
-### 5.1 uv 설치
+### 1. Claude Desktop 설치
 
-#### Windows
+[Claude 공식 다운로드 페이지](https://claude.com/download)에서 운영체제에 맞는
+Claude Desktop을 설치하고 로그인합니다.
 
-PowerShell:
+### 2. Claude Code에 설치 요청
 
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+Claude Desktop에서 Claude Code를 열거나 터미널에서 Claude Code를 실행한 뒤, 아래 내용을
+그대로 요청합니다.
+
+```text
+korean-taxlaw-mcp를 내 컴퓨터에 설치하고 Claude Desktop에서 사용할 수 있게 설정해줘.
+저장소: https://github.com/zisu17/korean-taxlaw-mcp
+MCP 이름은 korean-taxlaw로 등록하고, 설치 후 연결 테스트까지 해줘.
 ```
 
-사내 정책으로 스크립트 실행이 제한된 경우:
+Claude Code가 명령 실행이나 Claude Desktop 설정 파일 변경 권한을 요청하면 내용을 확인한
+뒤 승인합니다.
 
-```powershell
-winget install --id=astral-sh.uv -e
+### 3. Claude Desktop 재시작
+
+설치가 끝나면 Claude Desktop을 완전히 종료했다가 다시 실행합니다.
+
+### 4. 연결 확인
+
+Claude Desktop에서 다음처럼 요청해 봅니다.
+
+```text
+국세청에서 "공동상속주택" 관련 세법해석례를 찾아줘.
 ```
 
-#### macOS / Linux
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-설치 후 터미널을 다시 열고 확인합니다.
-
-```bash
-uv --version
-```
-
-### 5.2 서버 설치
-
-GitHub 주소에서 바로 설치할 수 있습니다.
-
-```bash
-uv tool install git+<GitHub 주소>
-```
-
-설치 후 `nts-taxlaw-mcp` 명령을 어느 경로에서든 실행할 수 있습니다.
-
-설치 위치 확인:
-
-```powershell
-(Get-Command nts-taxlaw-mcp).Source
-```
-
-```bash
-which nts-taxlaw-mcp
-```
-
-일반적인 설치 경로:
-
-| OS | 경로 |
-|---|---|
-| Windows | `C:\Users\<사용자>\.local\bin\nts-taxlaw-mcp.exe` |
-| macOS / Linux | `~/.local/bin/nts-taxlaw-mcp` |
-
-업데이트:
-
-```bash
-uv tool upgrade nts-taxlaw-mcp
-```
-
-제거:
-
-```bash
-uv tool uninstall nts-taxlaw-mcp
-```
-
-### 5.3 소스 설치
-
-코드를 수정하거나 테스트를 실행할 경우 저장소를 내려받아 사용합니다.
-
-```bash
-git clone <GitHub 주소>
-cd nts-taxlaw-mcp
-uv sync
-```
-
-`uv sync`는 다음 작업을 수행합니다.
-
-- `requires-python = ">=3.11"`에 맞는 Python 확인 및 설치
-- 프로젝트 디렉터리에 `.venv` 생성
-- `uv.lock` 기준 의존성 설치
-
-가상환경을 직접 활성화할 필요는 없습니다. 이후 명령은 `uv run`으로 실행합니다.
-
-git을 사용할 수 없는 환경에서는 GitHub의 **Code > Download ZIP**으로 내려받은 뒤 압축을 풀고 `uv sync`를 실행해도 됩니다.
-
-동작 확인:
-
-```bash
-uv run nts-taxlaw-mcp --help
-uv run python scripts/compare_with_site.py
-```
-
-### 5.4 PATH 확인
-
-설치 직후 `uv` 또는 `nts-taxlaw-mcp` 명령을 찾지 못하면 터미널을 다시 연 뒤 확인합니다.
-
-```powershell
-uv tool update-shell
-```
-
-Windows에서 절대경로로 확인:
-
-```powershell
-& "$env:USERPROFILE\.local\bin\uv.exe" --version
-```
-
-macOS / Linux:
-
-```bash
-~/.local/bin/uv --version
-```
+Claude가 `korean-taxlaw` 도구를 사용해 출처 링크와 함께 결과를 반환하면 설치가 완료된
+것입니다.
 
 ---
 
-## 6. Claude Code 연결
+## 6. 직접 설치와 문제 해결
 
-### uv tool로 설치한 경우
+Claude Code를 사용할 수 없거나 직접 설치해야 한다면
+[`docs/INSTALLATION.md`](docs/INSTALLATION.md)를 참고하세요. 다음 내용을 포함합니다.
 
-```bash
-claude mcp add nts-taxlaw -- nts-taxlaw-mcp
-```
-
-명령을 찾지 못하면 설치 경로를 확인한 뒤 절대경로를 지정합니다.
-
-```powershell
-claude mcp add nts-taxlaw -- "C:\Users\<사용자>\.local\bin\nts-taxlaw-mcp.exe"
-```
-
-### 저장소에서 실행하는 경우
-
-```bash
-claude mcp add nts-taxlaw -- uv run --directory /절대경로/nts-taxlaw-mcp nts-taxlaw-mcp
-```
-
-등록 확인:
-
-```bash
-claude mcp list
-```
-
-### HTTP 연결
-
-서버 실행:
-
-```bash
-nts-taxlaw-mcp --http --port 8000
-```
-
-Claude Code 등록:
-
-```bash
-claude mcp add --transport http nts-taxlaw http://127.0.0.1:8000/mcp
-```
+- Windows·macOS·Linux용 `uv` 설치
+- 실행파일 경로와 PATH 확인
+- Claude Code 및 Claude Desktop 수동 등록
+- 소스 설치와 `pip + venv` 대체 방법
+- HTTP 연결과 문제 해결
 
 ---
 
-## 7. Claude Desktop 연결
+## 7. 함께 사용하기
 
-설정 파일:
-
-| OS | 경로 |
-|---|---|
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-
-Claude Desktop에서는 실행파일의 절대경로를 지정하는 편이 안정적입니다.
-
-### Windows
-
-uv tool 설치:
-
-```json
-{
-  "mcpServers": {
-    "nts-taxlaw": {
-      "command": "C:\\Users\\<사용자>\\.local\\bin\\nts-taxlaw-mcp.exe"
-    }
-  }
-}
-```
-
-저장소에서 실행:
-
-```json
-{
-  "mcpServers": {
-    "nts-taxlaw": {
-      "command": "C:\\Users\\<사용자>\\.local\\bin\\uv.exe",
-      "args": [
-        "run",
-        "--directory",
-        "C:\\Users\\<사용자>\\nts-taxlaw-mcp",
-        "nts-taxlaw-mcp"
-      ]
-    }
-  }
-}
-```
-
-JSON에서 Windows 경로의 백슬래시는 `\\`로 작성합니다. `/`를 사용해도 됩니다.
-
-### macOS
-
-uv tool 설치:
-
-```json
-{
-  "mcpServers": {
-    "nts-taxlaw": {
-      "command": "/Users/<사용자>/.local/bin/nts-taxlaw-mcp"
-    }
-  }
-}
-```
-
-저장소에서 실행:
-
-```json
-{
-  "mcpServers": {
-    "nts-taxlaw": {
-      "command": "/Users/<사용자>/.local/bin/uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/<사용자>/nts-taxlaw-mcp",
-        "nts-taxlaw-mcp"
-      ]
-    }
-  }
-}
-```
-
-실제 경로는 다음 명령으로 확인합니다.
-
-```powershell
-(Get-Command nts-taxlaw-mcp).Source
-```
-
-```bash
-which nts-taxlaw-mcp
-```
-
-### korean-law-mcp와 함께 사용
-
-법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는 `nts-taxlaw-mcp`에서 조회하는 구성을 권장합니다.
-
-```json
-{
-  "mcpServers": {
-    "korean-law": {
-      "command": "npx",
-      "args": ["-y", "korean-law-mcp"],
-      "env": {
-        "LAW_OC": "발급받은-인증키"
-      }
-    },
-    "nts-taxlaw": {
-      "command": "C:\\Users\\<사용자>\\.local\\bin\\nts-taxlaw-mcp.exe"
-    }
-  }
-}
-```
-
-### pip + venv
-
-uv를 사용할 수 없는 환경에서는 Python 3.11 이상을 직접 설치해 기존 방식으로 실행할 수 있습니다.
-
-```bash
-git clone <GitHub 주소>
-cd nts-taxlaw-mcp
-
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-
-python -m nts_taxlaw_mcp --help
-```
-
-Windows 가상환경 활성화:
-
-```powershell
-.venv\Scripts\activate
-```
-
-Claude Desktop에는 가상환경의 Python 절대경로를 지정합니다.
-
-```json
-{
-  "mcpServers": {
-    "nts-taxlaw": {
-      "command": "/절대경로/nts-taxlaw-mcp/.venv/bin/python",
-      "args": ["-m", "nts_taxlaw_mcp"]
-    }
-  }
-}
-```
+법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는
+`korean-taxlaw-mcp`로 조회하는 구성을 권장합니다. Claude Code에 두 MCP를 함께 설치해
+달라고 요청하면 법령 본문과 국세청 해석례·결정례를 출처별로 나누어 확인할 수 있습니다.
 
 ---
 

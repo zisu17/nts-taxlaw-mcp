@@ -16,10 +16,10 @@ import sys
 import httpx
 from fastmcp import Client
 
-from nts_taxlaw_mcp.action_client import ACTION_URL, close_client
-from nts_taxlaw_mcp.config import DEFAULT_USER_AGENT, NTS_ORIGIN
-from nts_taxlaw_mcp.html_text import strip_highlight
-from nts_taxlaw_mcp.server import mcp
+from korean_taxlaw_mcp.action_client import ACTION_URL, close_client
+from korean_taxlaw_mcp.config import DEFAULT_USER_AGENT, NTS_ORIGIN
+from korean_taxlaw_mcp.html_text import strip_highlight
+from korean_taxlaw_mcp.server import mcp
 
 
 async def raw(action_id: str, param: dict) -> dict:
