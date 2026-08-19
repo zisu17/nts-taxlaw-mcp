@@ -1,0 +1,79 @@
+# ─── Python 바이트코드·빌드 산출물 ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
+
+# ─── 가상환경 ──────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ─── 테스트·커버리지·타입검사 캐시 ─────────────────────────────────────────
+.pytest_cache/
+.cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ─── 환경변수 (NTS_* 설정을 로컬 파일로 두는 경우) ──────────────────────────
+# 기본값만으로 동작하므로 커밋할 이유가 없다. README 8절 참조.
+.env
+.env.*
+!.env.example
+
+# ─── 에디터·IDE ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.ipynb_checkpoints/
+
+# ─── OS ────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+# ─── Claude Code ───────────────────────────────────────────────────────────
+# settings.json 은 팀 공유용이라 커밋하고, local 만 제외한다.
+.claude/settings.local.json
+
+# ─── 테스트 fixture (재생성 가능) ──────────────────────────────────────────
+# 실제 국세청 응답을 그대로 담아 약 8MB. 이 저장소를 clone 하는 사람 대부분은
+# 서버를 **쓰기만** 하고 테스트를 돌리지 않으므로 커밋하지 않는다.
+# 필요하면 한 번 받으면 된다:  python scripts/refresh_fixtures.py
+tests/fixtures/*.json
+
+# ─── 이 프로젝트에서 생기는 임시 산출물 ────────────────────────────────────
+# 조사·디버깅 중 저장한 원본 응답 덤프나 페이지 스냅샷.
+# tests/fixtures/ 의 정식 fixture 와 헷갈리지 않게 별도 경로를 쓴다.
+scratch/
+tmp/
+*.log
+# 사이트 HTML/JS 스냅샷 (엔드포인트 재조사용, 커밋 대상 아님)
+*.html.snapshot
+probe/

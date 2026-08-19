@@ -1,0 +1,35 @@
+[project]
+name = "nts-taxlaw-mcp"
+version = "1.0.0"
+description = "국세청 국세법령정보시스템(taxlaw.nts.go.kr) 원본 직접 조회 MCP 서버 — 문서번호 exact lookup, 세법해석례·판례결정례 본문, 기본통칙·집행기준·고시·훈령"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "nts-taxlaw-mcp" }]
+keywords = ["mcp", "국세청", "국세법령정보시스템", "세법", "예규", "판례", "tax", "korea"]
+
+dependencies = [
+    # FastMCP 가 호환되는 mcp 버전과 HTTP 전송용 uvicorn·starlette 를 함께 끌어온다.
+    # mcp 를 직접 고정하면 fastmcp(mcp>=1.24,<2.0)와 충돌해 클라이언트 지원이 깨진다.
+    "fastmcp>=3.4,<4",
+    "httpx>=0.28",
+    "pydantic>=2.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.22"]
+
+[project.scripts]
+nts-taxlaw-mcp = "nts_taxlaw_mcp.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nts_taxlaw_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
