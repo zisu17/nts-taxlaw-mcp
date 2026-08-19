@@ -183,17 +183,19 @@ MCP에서는 다음과 같이 사용합니다.
 
 ## 5. 가장 쉬운 설치
 
-개발 도구나 Python을 직접 설정할 필요 없이 Claude Code에 설치를 맡기는 방법입니다.
+개발 도구나 Python을 직접 설정하지 않고 Claude Code 또는 Codex에 설치를 맡길 수 있습니다.
 
-### 1. Claude Desktop 설치
+### 1. 사용할 앱 설치
 
-[Claude 공식 다운로드 페이지](https://claude.com/download)에서 운영체제에 맞는
-Claude Desktop을 설치하고 로그인합니다.
+- Claude를 사용한다면 [Claude Desktop](https://claude.com/download)을 설치하고 로그인합니다.
+- Codex를 사용한다면 [ChatGPT 데스크톱 앱](https://chatgpt.com/download)을 설치하고
+  로그인한 뒤 Codex를 선택합니다.
 
-### 2. Claude Code에 설치 요청
+### 2. 설치 요청
 
-Claude Desktop에서 Claude Code를 열거나 터미널에서 Claude Code를 실행한 뒤, 아래 내용을
-그대로 요청합니다.
+둘 중 사용하는 도구에 맞는 내용을 그대로 요청합니다.
+
+#### Claude Code를 사용하는 경우
 
 ```text
 korean-taxlaw-mcp를 내 컴퓨터에 설치하고 Claude Desktop에서 사용할 수 있게 설정해줘.
@@ -201,29 +203,41 @@ korean-taxlaw-mcp를 내 컴퓨터에 설치하고 Claude Desktop에서 사용�
 MCP 이름은 korean-taxlaw로 등록하고, 설치 후 연결 테스트까지 해줘.
 ```
 
-Claude Code가 명령 실행이나 Claude Desktop 설정 파일 변경 권한을 요청하면 내용을 확인한
-뒤 승인합니다.
+#### Codex를 사용하는 경우
 
-### 3. Claude Desktop 재시작
+```text
+korean-taxlaw-mcp를 내 컴퓨터에 설치하고 Codex에서 사용할 수 있게 MCP로 등록해줘.
+저장소: https://github.com/zisu17/korean-taxlaw-mcp
+MCP 이름은 korean-taxlaw로 등록하고, 설치 후 목록 확인과 연결 테스트까지 해줘.
+```
 
-설치가 끝나면 Claude Desktop을 완전히 종료했다가 다시 실행합니다.
+Codex에 등록한 MCP 설정은 같은 컴퓨터의 ChatGPT 데스크톱 앱, Codex CLI, IDE 확장에서
+공유됩니다. 자세한 내용은 [Codex MCP 공식 문서](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)를
+참고하세요.
+
+Claude Code 또는 Codex가 명령 실행이나 설정 파일 변경 권한을 요청하면 내용을 확인한 뒤
+승인합니다.
+
+### 3. 앱 재시작
+
+설치가 끝나면 사용 중인 Claude Desktop 또는 ChatGPT 데스크톱 앱을 완전히 종료했다가
+다시 실행합니다.
 
 ### 4. 연결 확인
 
-Claude Desktop에서 다음처럼 요청해 봅니다.
+Claude 또는 Codex에서 다음처럼 요청해 봅니다.
 
 ```text
 국세청에서 "공동상속주택" 관련 세법해석례를 찾아줘.
 ```
 
-Claude가 `korean-taxlaw` 도구를 사용해 출처 링크와 함께 결과를 반환하면 설치가 완료된
-것입니다.
+`korean-taxlaw` 도구를 사용해 출처 링크와 함께 결과를 반환하면 설치가 완료된 것입니다.
 
 ---
 
 ## 6. 직접 설치와 문제 해결
 
-Claude Code를 사용할 수 없거나 직접 설치해야 한다면
+Claude Code나 Codex를 사용할 수 없거나 직접 설치해야 한다면
 [`docs/INSTALLATION.md`](docs/INSTALLATION.md)를 참고하세요. 다음 내용을 포함합니다.
 
 - Windows·macOS·Linux용 `uv` 설치
@@ -238,7 +252,8 @@ Claude Code를 사용할 수 없거나 직접 설치해야 한다면
 
 법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는
 `korean-taxlaw-mcp`로 조회하는 구성을 권장합니다. Claude Code에 두 MCP를 함께 설치해
-달라고 요청하면 법령 본문과 국세청 해석례·결정례를 출처별로 나누어 확인할 수 있습니다.
+달라고 요청하거나 Codex에 두 MCP를 함께 등록해 달라고 요청하면 법령 본문과 국세청
+해석례·결정례를 출처별로 나누어 확인할 수 있습니다.
 
 ---
 
