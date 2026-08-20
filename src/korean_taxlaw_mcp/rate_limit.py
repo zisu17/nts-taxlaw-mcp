@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
 
 from .config import NTS
 
@@ -31,14 +29,11 @@ class TokenBucket:
         self._burst = burst if burst is not None else rate_per_min
         self._tokens = float(self._burst)
         self._last = 0.0
-        self._cooldown_until = 0.0
 
     def take(self, n: int = 1, now: float | None = None) -> Verdict:
         if self._rate <= 0:
             return Verdict(False, 60)
         current = time.monotonic() if now is None else now
-        if current < self._cooldown_until:
-            return Verdict(False, max(1, int(self._cooldown_until - current) + 1))
         if self._last == 0.0:
             self._last = current
         self._tokens = min(self._burst, self._tokens + (current - self._last) / 60.0 * self._rate)
@@ -54,29 +49,6 @@ class TokenBucket:
         """버킷을 가득 찬 상태로 되돌린다. 테스트 격리용."""
         self._tokens = float(self._burst)
         self._last = 0.0
-        self._cooldown_until = 0.0
-
-    def block_for(self, seconds: int, now: float | None = None) -> None:
-        """업스트림이 과부하·차단 신호를 주면 추가 요청을 즉시 멈춘다."""
-        current = time.monotonic() if now is None else now
-        self._cooldown_until = max(self._cooldown_until, current + max(1, seconds))
-
-
-def retry_after_seconds(value: str | None, *, default: int) -> int:
-    """HTTP ``Retry-After``(초 또는 HTTP-date)를 보수적인 대기 시간으로 바꾼다."""
-    if not value:
-        return default
-    raw = value.strip()
-    if raw.isdigit():
-        return max(default, int(raw))
-    try:
-        target = parsedate_to_datetime(raw)
-        if target.tzinfo is None:
-            target = target.replace(tzinfo=timezone.utc)
-        remaining = int((target - datetime.now(timezone.utc)).total_seconds()) + 1
-    except (TypeError, ValueError, OverflowError):
-        return default
-    return max(default, remaining)
 
 
 #: 국세청 전용 버킷. 지방세는 :data:`korean_taxlaw_mcp.olta_client.olta_limiter`.

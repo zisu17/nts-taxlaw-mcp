@@ -6,9 +6,8 @@
 
 국세와 지방세는 서로 다른 원본 서버를 사용하므로 호출량을 출처별로 계산합니다.
 
-- 기본 한도: 출처별 분당 30회, 순간 버스트 10회
-- 403·429·차단 페이지 감지 시 해당 출처의 요청을 즉시 중단하고 기본 15분 대기
-- 원본의 `Retry-After`가 더 길면 해당 값을 준수
+- 기본 한도: 출처별 분당 60회, 순간 버스트 20회
+- 429와 일시적인 원본 서버 오류는 지수 백오프로 기본 3회 재시도
 - 같은 요청이 동시에 들어오면 실제 원본 조회는 한 번만 수행
 
 외부 기관의 WAF와 정책은 예고 없이 바뀔 수 있으므로 차단 가능성을 0으로 보장할 수는 없습니다.
@@ -25,11 +24,10 @@ NTS_* / OLTA_*  >  TAXLAW_*  >  기본값
 | 항목 | 공통 | 국세 전용 | 지방세 전용 | 기본값 |
 |---|---|---|---|---:|
 | 타임아웃(ms) | `TAXLAW_TIMEOUT_MS` | `NTS_TIMEOUT_MS` | `OLTA_TIMEOUT_MS` | `20000` |
-| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `1` |
-| 재시도 대기(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `1000` |
-| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `30` |
-| 버스트 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `10` |
-| 차단 신호 후 대기(초) | `TAXLAW_COOLDOWN_SEC` | `NTS_COOLDOWN_SEC` | `OLTA_COOLDOWN_SEC` | `900` |
+| 재시도 횟수 | `TAXLAW_RETRIES` | `NTS_RETRIES` | `OLTA_RETRIES` | `3` |
+| 재시도 대기(ms) | `TAXLAW_RETRY_BASE_MS` | `NTS_RETRY_BASE_MS` | `OLTA_RETRY_BASE_MS` | `300` |
+| 분당 요청 한도 | `TAXLAW_RATE_PER_MIN` | `NTS_RATE_PER_MIN` | `OLTA_RATE_PER_MIN` | `60` |
+| 버스트 | `TAXLAW_RATE_BURST` | `NTS_RATE_BURST` | `OLTA_RATE_BURST` | `20` |
 | 본문 길이 상한 | `TAXLAW_BODY_LIMIT` | `NTS_BODY_LIMIT` | `OLTA_BODY_LIMIT` | `30000` |
 | User-Agent | `TAXLAW_USER_AGENT` | `NTS_USER_AGENT` | `OLTA_USER_AGENT` | Chrome UA |
 | 캐시 항목 수 | `TAXLAW_CACHE_MAX` | — | — | `600` |
