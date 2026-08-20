@@ -28,7 +28,8 @@
 다음 문장을 그대로 요청하면 설치와 연결 확인을 맡길 수 있습니다.
 
 ```text
-korean-taxlaw-mcp를 설치하고 이 앱에 korean-taxlaw라는 MCP로 등록해줘.
+korean-taxlaw-mcp를 설치하고 모든 프로젝트에서 사용할 수 있도록
+사용자 범위에 korean-taxlaw라는 MCP로 등록해줘.
 저장소: https://github.com/zisu17/korean-taxlaw-mcp
 설치 후 연결 테스트까지 해줘.
 ```
@@ -39,8 +40,23 @@ korean-taxlaw-mcp를 설치하고 이 앱에 korean-taxlaw라는 MCP로 등록�
 
 ```bash
 uv tool install git+https://github.com/zisu17/korean-taxlaw-mcp.git
-claude mcp add korean-taxlaw -- korean-taxlaw-mcp
 ```
+
+Claude Code에 등록:
+
+```bash
+claude mcp add --scope user korean-taxlaw -- korean-taxlaw-mcp
+```
+
+Codex에 등록:
+
+```bash
+codex mcp add korean-taxlaw -- korean-taxlaw-mcp
+```
+
+Claude Code의 `--scope user`와 Codex의 기본 사용자 설정은 현재 프로젝트에 한정되지 않고
+모든 프로젝트에 적용됩니다. Codex 설정은 같은 컴퓨터의 ChatGPT 데스크톱 앱, Codex CLI,
+IDE 확장에서 공유됩니다.
 
 설치가 끝나면 사용 중인 데스크톱 앱을 완전히 종료한 뒤 다시 실행하세요. 운영체제별 설치,
 수동 등록, HTTP 연결, 문제 해결은 [설치 가이드](docs/INSTALLATION.md)를 참고하세요.
