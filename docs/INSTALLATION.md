@@ -207,8 +207,7 @@ claude mcp add --transport http korean-taxlaw http://127.0.0.1:8000/mcp
 
 ## 8. 함께 사용하면 좋은 MCP
 
-법률·시행령·시행규칙 본문은
-[chrisryugj/korean-law-mcp](https://github.com/chrisryugj/korean-law-mcp), 국세청 고유 자료는
+법률·시행령·시행규칙 본문은 `korean-law-mcp`, 국세청 고유 자료는
 `korean-taxlaw-mcp`로 조회하는 구성을 권장합니다. 두 서버를 함께 등록하면 법령 본문과
 국세청 해석례·결정례를 서로 다른 출처와 권위 수준으로 확인할 수 있습니다.
 

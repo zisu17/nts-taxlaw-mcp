@@ -83,8 +83,6 @@ class SiteConfig:
     retry_base_seconds: float
     rate_per_min: int
     rate_burst: int
-    #: 403/429/차단 페이지를 보면 이 시간 동안 해당 호스트를 다시 부르지 않는다.
-    cooldown_seconds: int
     #: 본문 응답 상한(글자). 도구의 body_limit 인수가 없을 때 쓰는 기본값.
     body_limit: int
     user_agent: str
@@ -98,15 +96,12 @@ def _site(name: str, origin: str, prefix: str, *, default_body_limit: int) -> Si
         timeout_seconds=_env_int(
             f"{prefix}_TIMEOUT_MS", "TAXLAW_TIMEOUT_MS", default=20_000
         ) / 1000,
-        retries=_env_int(f"{prefix}_RETRIES", "TAXLAW_RETRIES", default=1, minimum=0),
+        retries=_env_int(f"{prefix}_RETRIES", "TAXLAW_RETRIES", default=3, minimum=0),
         retry_base_seconds=_env_int(
-            f"{prefix}_RETRY_BASE_MS", "TAXLAW_RETRY_BASE_MS", default=1_000
+            f"{prefix}_RETRY_BASE_MS", "TAXLAW_RETRY_BASE_MS", default=300
         ) / 1000,
-        rate_per_min=_env_int(f"{prefix}_RATE_PER_MIN", "TAXLAW_RATE_PER_MIN", default=30),
-        rate_burst=_env_int(f"{prefix}_RATE_BURST", "TAXLAW_RATE_BURST", default=10),
-        cooldown_seconds=_env_int(
-            f"{prefix}_COOLDOWN_SEC", "TAXLAW_COOLDOWN_SEC", default=15 * 60
-        ),
+        rate_per_min=_env_int(f"{prefix}_RATE_PER_MIN", "TAXLAW_RATE_PER_MIN", default=60),
+        rate_burst=_env_int(f"{prefix}_RATE_BURST", "TAXLAW_RATE_BURST", default=20),
         body_limit=_env_int(
             f"{prefix}_BODY_LIMIT", "TAXLAW_BODY_LIMIT",
             default=default_body_limit, minimum=500,

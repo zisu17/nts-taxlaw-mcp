@@ -36,12 +36,12 @@ import httpx
 from .cache import cache
 from .config import OLTA, OLTA_ORIGIN
 from .errors import ErrorCode, NtsError, upstream
-from .rate_limit import TokenBucket, retry_after_seconds
+from .rate_limit import TokenBucket
 
 #: 지방세 사이트는 국세청과 별개 호스트이므로 요청 한도도 따로 센다.
 olta_limiter = TokenBucket(OLTA.rate_per_min, OLTA.rate_burst)
 
-_RETRY_STATUS = {500, 502, 503, 504}
+_RETRY_STATUS = {429, 500, 502, 503, 504}
 
 _client: httpx.AsyncClient | None = None
 _client_lock = asyncio.Lock()
@@ -55,7 +55,7 @@ async def get_client() -> httpx.AsyncClient:
         if _client is None or _client.is_closed:
             _client = httpx.AsyncClient(
                 timeout=httpx.Timeout(OLTA.timeout_seconds),
-                limits=httpx.Limits(max_connections=2, max_keepalive_connections=2),
+                limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
                 follow_redirects=True,
                 headers={
                     "user-agent": OLTA.user_agent,
@@ -93,6 +93,7 @@ async def _request(
     (실측). 이 사이트는 반복 키를 쓰지 않으므로 dict 로 충분하다 — 세목 다중 선택도
     ``taxTitleStr`` 한 필드에 ``|`` 로 이어 붙인다.
     """
+    _check_limit()
     client = await get_client()
     url = f"{OLTA_ORIGIN}{path}"
     headers = {"referer": url}
@@ -101,8 +102,6 @@ async def _request(
     for attempt in range(OLTA.retries + 1):
         if attempt:
             await asyncio.sleep(OLTA.retry_base_seconds * (2 ** (attempt - 1)))
-        # 재시도도 실제 요청이므로 매번 별도로 한도를 소모한다.
-        _check_limit()
         try:
             response = await (
                 client.post(url, data=data, headers=headers)
@@ -123,22 +122,6 @@ async def _request(
                 break
             continue
 
-        if response.status_code in {403, 429}:
-            wait = retry_after_seconds(
-                response.headers.get("retry-after"),
-                default=(
-                    OLTA.cooldown_seconds
-                    if response.status_code == 429
-                    else max(3600, OLTA.cooldown_seconds)
-                ),
-            )
-            olta_limiter.block_for(wait)
-            raise NtsError(
-                ErrorCode.RATE_LIMITED,
-                f"지방세 법령정보시스템이 HTTP {response.status_code}를 반환해 "
-                f"{wait}초 동안 요청을 중지합니다.",
-                detail={"status": response.status_code, "retryAfterSec": wait},
-            )
         if response.status_code in _RETRY_STATUS and attempt < OLTA.retries:
             last_error = upstream(
                 f"지방세 법령정보시스템 HTTP {response.status_code}", path=path, status=response.status_code
@@ -150,22 +133,6 @@ async def _request(
             )
 
         text = response.text
-        sample = text[:2_000].casefold()
-        block_markers = (
-            "access denied",
-            "request rejected",
-            "captcha",
-            "비정상적인 접근",
-            "서비스 이용이 제한",
-            "접근이 차단",
-        )
-        if any(marker in sample for marker in block_markers):
-            olta_limiter.block_for(OLTA.cooldown_seconds)
-            raise upstream(
-                "지방세 법령정보시스템 차단 페이지가 감지되어 보호 대기 상태로 전환했습니다.",
-                path=path,
-                retryAfterSec=OLTA.cooldown_seconds,
-            )
         if not text.strip():
             last_error = upstream("지방세 법령정보시스템 응답 본문이 비어 있습니다.", path=path)
             if attempt >= OLTA.retries:
