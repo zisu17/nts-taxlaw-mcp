@@ -81,23 +81,25 @@ uv tool update-shell
 
 ## 3. Claude Code 연결
 
+모든 프로젝트에서 사용할 수 있도록 사용자 범위(`--scope user`)에 등록합니다.
+
 uv tool로 설치한 경우:
 
 ```bash
-claude mcp add korean-taxlaw -- korean-taxlaw-mcp
+claude mcp add --scope user korean-taxlaw -- korean-taxlaw-mcp
 claude mcp list
 ```
 
 명령을 찾지 못하는 Windows 환경에서는 절대경로를 지정합니다.
 
 ```powershell
-claude mcp add korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
+claude mcp add --scope user korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
 ```
 
 소스 저장소에서 직접 실행하는 경우:
 
 ```bash
-claude mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
+claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
 ```
 
 ## 4. Claude Desktop 수동 연결
@@ -156,7 +158,7 @@ uv run korean-taxlaw-mcp --help
 Claude Code에 소스 실행 방식으로 등록:
 
 ```bash
-claude mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
+claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
 ```
 
 ## 6. pip + venv 대체 설치
@@ -202,7 +204,7 @@ korean-taxlaw-mcp --http --port 8000
 Claude Code 등록:
 
 ```bash
-claude mcp add --transport http korean-taxlaw http://127.0.0.1:8000/mcp
+claude mcp add --scope user --transport http korean-taxlaw http://127.0.0.1:8000/mcp
 ```
 
 ## 8. 함께 사용하면 좋은 MCP
