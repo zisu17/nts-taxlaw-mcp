@@ -79,27 +79,43 @@ which korean-taxlaw-mcp
 uv tool update-shell
 ```
 
-## 3. Claude Code 연결
+## 3. Claude Code와 Codex 연결
 
-모든 프로젝트에서 사용할 수 있도록 사용자 범위(`--scope user`)에 등록합니다.
+모든 프로젝트에서 사용할 수 있도록 사용자 범위에 등록합니다. Claude Code는
+`--scope user`를 지정하고, Codex는 기본 사용자 설정인 `~/.codex/config.toml`에 저장합니다.
 
 uv tool로 설치한 경우:
+
+Claude Code:
 
 ```bash
 claude mcp add --scope user korean-taxlaw -- korean-taxlaw-mcp
 claude mcp list
 ```
 
+Codex:
+
+```bash
+codex mcp add korean-taxlaw -- korean-taxlaw-mcp
+codex mcp list
+```
+
+Codex에 등록한 MCP 설정은 같은 컴퓨터의 ChatGPT 데스크톱 앱, Codex CLI, IDE 확장에서
+공유됩니다. 자세한 내용은 [Codex MCP 공식 문서](https://developers.openai.com/codex/mcp/)를
+참고하세요.
+
 명령을 찾지 못하는 Windows 환경에서는 절대경로를 지정합니다.
 
 ```powershell
 claude mcp add --scope user korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
+codex mcp add korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
 ```
 
 소스 저장소에서 직접 실행하는 경우:
 
 ```bash
 claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
+codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
 ```
 
 ## 4. Claude Desktop 수동 연결
@@ -155,10 +171,11 @@ uv run korean-taxlaw-mcp --help
 `uv sync`는 호환되는 Python을 확인하고 프로젝트의 `.venv`와 `uv.lock` 기준 의존성을
 준비합니다. 가상환경을 직접 활성화할 필요는 없습니다.
 
-Claude Code에 소스 실행 방식으로 등록:
+Claude Code 또는 Codex에 소스 실행 방식으로 등록:
 
 ```bash
 claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
+codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
 ```
 
 ## 6. pip + venv 대체 설치
@@ -201,10 +218,11 @@ Claude Desktop에는 가상환경 Python의 절대경로를 지정할 수도 있
 korean-taxlaw-mcp --http --port 8000
 ```
 
-Claude Code 등록:
+Claude Code 또는 Codex 등록:
 
 ```bash
 claude mcp add --scope user --transport http korean-taxlaw http://127.0.0.1:8000/mcp
+codex mcp add korean-taxlaw --url http://127.0.0.1:8000/mcp
 ```
 
 ## 8. 함께 사용하면 좋은 MCP
