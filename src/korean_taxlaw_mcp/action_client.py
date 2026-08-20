@@ -26,9 +26,9 @@ import httpx
 from .cache import cache
 from .config import NTS, ACTION_URL, NTS_ORIGIN
 from .errors import ErrorCode, NtsError, upstream
-from .rate_limit import upstream_limiter
+from .rate_limit import retry_after_seconds, upstream_limiter
 
-_RETRY_STATUS = {429, 500, 502, 503, 504}
+_RETRY_STATUS = {500, 502, 503, 504}
 
 _client: httpx.AsyncClient | None = None
 _client_lock = asyncio.Lock()
@@ -43,7 +43,7 @@ async def get_client() -> httpx.AsyncClient:
         if _client is None or _client.is_closed:
             _client = httpx.AsyncClient(
                 timeout=httpx.Timeout(NTS.timeout_seconds),
-                limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
+                limits=httpx.Limits(max_connections=2, max_keepalive_connections=2),
                 follow_redirects=False,
                 headers={
                     "user-agent": NTS.user_agent,
@@ -65,14 +65,6 @@ async def close_client() -> None:
 
 async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[str, Any]:
     """``action.do`` 한 번 호출. 재시도·타임아웃·한도만 담당하고 해석은 하지 않는다."""
-    verdict = upstream_limiter.take(1)
-    if not verdict.ok:
-        raise NtsError(
-            ErrorCode.RATE_LIMITED,
-            f"요청 한도 초과: {verdict.retry_after_sec}초 후 재시도하세요.",
-            detail={"retryAfterSec": verdict.retry_after_sec},
-        )
-
     client = await get_client()
     body = {"actionId": action_id, "paramData": json.dumps(param_data, ensure_ascii=False)}
     last_error: BaseException | None = None
@@ -80,6 +72,14 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
     for attempt in range(NTS.retries + 1):
         if attempt:
             await asyncio.sleep(NTS.retry_base_seconds * (2 ** (attempt - 1)))
+        # 재시도도 업스트림 요청이므로 매번 한도를 소모한다.
+        verdict = upstream_limiter.take(1)
+        if not verdict.ok:
+            raise NtsError(
+                ErrorCode.RATE_LIMITED,
+                f"요청 보호 대기 중: {verdict.retry_after_sec}초 후 재시도하세요.",
+                detail={"retryAfterSec": verdict.retry_after_sec},
+            )
         try:
             response = await client.post(
                 ACTION_URL,
@@ -102,6 +102,22 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
                 break
             continue
 
+        if response.status_code in {403, 429}:
+            wait = retry_after_seconds(
+                response.headers.get("retry-after"),
+                default=(
+                    NTS.cooldown_seconds
+                    if response.status_code == 429
+                    else max(3600, NTS.cooldown_seconds)
+                ),
+            )
+            upstream_limiter.block_for(wait)
+            raise NtsError(
+                ErrorCode.RATE_LIMITED,
+                f"국세법령정보시스템이 HTTP {response.status_code}를 반환해 "
+                f"{wait}초 동안 요청을 중지합니다.",
+                detail={"status": response.status_code, "retryAfterSec": wait},
+            )
         if response.status_code in _RETRY_STATUS and attempt < NTS.retries:
             last_error = upstream(
                 f"action.do HTTP {response.status_code}", actionId=action_id, status=response.status_code
@@ -113,19 +129,20 @@ async def _post_action(action_id: str, param_data: Any, referer: str) -> dict[st
             )
 
         text = response.text
-        # 점검·차단 페이지는 200 + HTML 로 온다. 빈 본문도 일시 장애로 본다.
+        # 점검·차단 페이지는 200 + HTML 로 온다. 반복 요청하지 않는다.
         if not text.strip():
             last_error = upstream("action.do 응답 본문이 비어 있습니다.", actionId=action_id)
             if attempt >= NTS.retries:
                 break
             continue
         if text.lstrip().startswith("<"):
-            last_error = upstream(
-                "action.do 가 JSON 대신 HTML 을 반환했습니다(점검·차단 가능).", actionId=action_id
+            upstream_limiter.block_for(NTS.cooldown_seconds)
+            raise upstream(
+                "action.do 가 JSON 대신 HTML 을 반환해 보호 대기 상태로 전환했습니다"
+                "(점검·차단 가능).",
+                actionId=action_id,
+                retryAfterSec=NTS.cooldown_seconds,
             )
-            if attempt >= NTS.retries:
-                break
-            continue
 
         try:
             return json.loads(text)
