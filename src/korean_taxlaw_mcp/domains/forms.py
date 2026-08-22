@@ -2,12 +2,12 @@
 
 액션(실측): ``ASIAFB001MR02 {}`` → 서식을 가진 법령 1,748건,
 ``ASIAFB001MR01 {searchNtstBscId, ...}`` → 서식 34,487건.
-파라미터 이름이 ``ntstBscId`` 가 아니라 **``searchNtstBscId``** 라는 점이 함정이다
+파라미터 이름은 ``ntstBscId``가 아니라 ``searchNtstBscId``다
 (``ntstBscId`` 로 주면 0건이 온다).
 
 파일 실물 다운로드는 사이트가 POST 폼(``/downloadStorFile.do``)으로 렌더링해
-내려주는 방식이라 안정적인 GET URL 이 없다. 그래서 MCP 는 바이너리를 대신
-받아오지 않고 **서식 메타데이터와 조회 화면 URL** 만 제공한다.
+내려주는 방식이라 안정적인 GET URL이 없다. MCP는 바이너리 대신 서식 메타데이터와
+조회 화면 URL만 제공한다.
 """
 
 from __future__ import annotations

@@ -1,8 +1,8 @@
 """문서 모델과 출처·권위 표기.
 
-세무 상담에서 가장 위험한 혼동은 **법적 근거와 안내자료를 같은 무게로 읽는 것**이다.
-그래서 모든 반환 문서에 ``authorityLevel`` 을 붙여, 법률 조문과 국세청 집행기준과
-발간책자가 서로 다른 층임을 기계가 읽을 수 있게 한다.
+법적 근거와 안내자료를 같은 무게로 읽으면 세무 상담에서 잘못된 결론이 나올 수 있다.
+모든 반환 문서에 ``authorityLevel`` 을 붙여 법률 조문, 국세청 집행기준, 발간책자의
+층위를 구분한다.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ class AuthorityLevel(StrEnum):
     COURT_CASE = "court_case"
 
 
-#: 한국어 설명 — 모델이 층위를 오해하지 않게 응답에 함께 싣는다.
+#: 모델이 층위를 구분할 수 있도록 응답에 싣는 한국어 설명.
 AUTHORITY_LABEL: dict[AuthorityLevel, str] = {
     AuthorityLevel.STATUTE: "법률 (국회 제정 — 법적 구속력)",
     AuthorityLevel.ENFORCEMENT_DECREE: "시행령 (대통령령 — 법적 구속력)",

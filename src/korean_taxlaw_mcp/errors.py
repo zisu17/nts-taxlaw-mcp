@@ -1,9 +1,8 @@
 """구조화된 오류.
 
-이 서버의 최우선 요구사항은 "없는 것을 없다고 말하기"다. 그래서 오류 코드는
-**자료가 없다**(NOT_FOUND)와 **업스트림이 답을 주지 못했다**(UPSTREAM_ERROR,
-DETAIL_NOT_AVAILABLE)를 절대 섞지 않는다. 이 둘을 한 라벨로 뭉개면 장애가
-부존재로 읽혀서, 실재하는 예규를 "없습니다"라고 답하는 거짓 부정이 된다.
+이 서버는 "없는 것을 없다고 말하기"를 가장 중요하게 본다. ``NOT_FOUND``와
+``UPSTREAM_ERROR``·``DETAIL_NOT_AVAILABLE``을 구분하지 않으면 원본 서버 장애를
+자료 부존재로 잘못 해석해 실재하는 예규를 "없습니다"라고 답할 수 있다.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ class ErrorCode(StrEnum):
     TIMEOUT = "TIMEOUT"
 
 
-#: 모델이 본문·결론을 만들어내지 못하게 못 박는 지시문.
+#: 모델이 확인하지 않은 본문이나 결론을 만들지 않도록 붙이는 지시문.
 GUARDRAIL: dict[ErrorCode, str] = {
     ErrorCode.NOT_FOUND: (
         "원본에 일치하는 자료가 없습니다. 문서 내용을 추측하거나 생성하지 마세요. "

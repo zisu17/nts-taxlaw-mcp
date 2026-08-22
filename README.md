@@ -8,8 +8,8 @@
 - 출처 URL과 근거 유형을 포함한 구조화 응답
 
 > 법률·시행령·시행규칙 본문은 제공하지 않습니다. 해당 자료는 국가법령정보센터 기반의
-> [chrisryugj/korean-law-mcp](https://github.com/chrisryugj/korean-law-mcp)를 함께 사용하는
-> 구성을 권장합니다.
+> [chrisryugj/korean-law-mcp](https://github.com/chrisryugj/korean-law-mcp)와 함께 쓰는 편이
+> 좋습니다.
 
 ## 조회 가능한 자료
 
@@ -23,43 +23,44 @@
 
 ## 빠른 시작
 
-### Claude Code나 Codex에 설치 요청하기
+사용 중인 데스크톱 앱에서 새 대화를 열고 아래 요청문을 붙여 넣으세요. 나머지는 앱에
+맡기면 됩니다.
 
-다음 문장을 그대로 요청하면 설치와 연결 확인을 맡길 수 있습니다.
+### Claude Desktop에 설치 요청하기
+
+Claude Desktop 대화창에 다음 요청문을 입력합니다.
 
 ```text
-korean-taxlaw-mcp를 설치하고 모든 프로젝트에서 사용할 수 있도록
-사용자 범위에 korean-taxlaw라는 MCP로 등록해줘.
+korean-taxlaw-mcp를 이 컴퓨터에 로컬 MCP로 설치해줘.
+
+현재 사용 중인 Claude Desktop 앱의 로컬 STDIO MCP 서버로 등록하고,
+이름은 korean-taxlaw로 지정해줘.
+
 저장소: https://github.com/zisu17/korean-taxlaw-mcp
-설치 후 연결 테스트까지 해줘.
+
+uv가 없으면 먼저 설치해. 그런 다음 uv tool로 패키지를 설치하고 실행 파일의 절대경로를
+찾아 Claude Desktop 설정에 넣어줘. 기존 MCP 설정은 그대로 두고, 끝나면 앱 재시작 방법을
+알려준 뒤 연결도 확인해줘.
 ```
 
-### 직접 설치하기
+### ChatGPT 데스크톱 앱의 Codex에 설치 요청하기
 
-[uv](https://docs.astral.sh/uv/)를 설치한 뒤 실행합니다.
+ChatGPT 데스크톱 앱의 Codex 대화창에 다음 요청문을 입력합니다.
 
-```bash
-uv tool install git+https://github.com/zisu17/korean-taxlaw-mcp.git
+```text
+korean-taxlaw-mcp를 이 컴퓨터에 로컬 MCP로 설치해줘.
+
+현재 사용 중인 ChatGPT 데스크톱 앱의 Codex에서 쓸 로컬 STDIO MCP 서버로
+등록하고, 이름은 korean-taxlaw로 지정해줘.
+
+저장소: https://github.com/zisu17/korean-taxlaw-mcp
+
+uv가 없으면 먼저 설치해. 그런 다음 uv tool로 패키지를 설치하고 실행 파일의 절대경로를
+찾아 ChatGPT 데스크톱 앱의 Codex MCP 설정에 넣어줘. 기존 MCP 설정은 그대로 두고,
+끝나면 앱 재시작 방법을 알려준 뒤 연결도 확인해줘.
 ```
 
-Claude Code에 등록:
-
-```bash
-claude mcp add --scope user korean-taxlaw -- korean-taxlaw-mcp
-```
-
-Codex에 등록:
-
-```bash
-codex mcp add korean-taxlaw -- korean-taxlaw-mcp
-```
-
-Claude Code의 `--scope user`와 Codex의 기본 사용자 설정은 현재 프로젝트에 한정되지 않고
-모든 프로젝트에 적용됩니다. Codex 설정은 같은 컴퓨터의 ChatGPT 데스크톱 앱, Codex CLI,
-IDE 확장에서 공유됩니다.
-
-설치가 끝나면 사용 중인 데스크톱 앱을 완전히 종료한 뒤 다시 실행하세요. 운영체제별 설치,
-수동 등록, HTTP 연결, 문제 해결은 [설치 가이드](docs/INSTALLATION.md)를 참고하세요.
+직접 설치하거나 문제를 해결해야 한다면 [설치 가이드](docs/INSTALLATION.md)를 참고하세요.
 
 ## 사용 예
 
@@ -88,7 +89,7 @@ MCP가 연결된 대화 창에서 일반 문장으로 요청하면 됩니다.
 ## 알아두기
 
 - 원본 시스템에서 조세 자료로 분류한 문서만 조회합니다.
-- 일부 자료는 원본 제공 방식에 따라 본문 대신 메타데이터나 파일 식별자만 반환될 수 있습니다.
+- 원본이 본문을 제공하지 않는 자료는 메타데이터나 파일 식별자만 반환합니다.
 - 이 서버는 원문 검색과 구조화를 위한 도구이며 세무 자문을 제공하지 않습니다. 신고·불복 등
   법적 효과가 있는 판단에는 현행 법령과 원문을 확인하고 전문가의 검토를 받으세요.
 

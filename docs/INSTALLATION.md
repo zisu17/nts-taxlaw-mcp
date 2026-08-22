@@ -1,8 +1,48 @@
 # 상세 설치 및 연결 가이드
 
-README의 간단 설치로 해결되지 않거나 직접 설정하려는 사용자를 위한 문서입니다.
+README의 빠른 시작으로 해결되지 않거나 직접 설정하려는 사용자를 위한 문서입니다.
+이 서버는 데스크톱 앱에서 로컬 STDIO MCP로 실행합니다.
 
-## 1. 권장 설치: uv tool
+## 1. 데스크톱 앱에 설치 요청하기
+
+설치와 설정을 직접 하지 않아도 됩니다. 사용하는 앱에서 새 대화를 열고 아래 요청문을
+붙여 넣으세요.
+
+### Claude Desktop
+
+Claude Desktop 대화창에 다음 요청문을 입력합니다.
+
+```text
+korean-taxlaw-mcp를 이 컴퓨터에 로컬 MCP로 설치해줘.
+
+현재 사용 중인 Claude Desktop 앱의 로컬 STDIO MCP 서버로 등록하고,
+이름은 korean-taxlaw로 지정해줘.
+
+저장소: https://github.com/zisu17/korean-taxlaw-mcp
+
+uv가 없으면 먼저 설치해. 그런 다음 uv tool로 패키지를 설치하고 실행 파일의 절대경로를
+찾아 Claude Desktop 설정에 넣어줘. 기존 MCP 설정은 그대로 두고, 끝나면 앱 재시작 방법을
+알려준 뒤 연결도 확인해줘.
+```
+
+### ChatGPT 데스크톱 앱의 Codex
+
+ChatGPT 데스크톱 앱의 Codex 대화창에 다음 요청문을 입력합니다.
+
+```text
+korean-taxlaw-mcp를 이 컴퓨터에 로컬 MCP로 설치해줘.
+
+현재 사용 중인 ChatGPT 데스크톱 앱의 Codex에서 쓸 로컬 STDIO MCP 서버로
+등록하고, 이름은 korean-taxlaw로 지정해줘.
+
+저장소: https://github.com/zisu17/korean-taxlaw-mcp
+
+uv가 없으면 먼저 설치해. 그런 다음 uv tool로 패키지를 설치하고 실행 파일의 절대경로를
+찾아 ChatGPT 데스크톱 앱의 Codex MCP 설정에 넣어줘. 기존 MCP 설정은 그대로 두고,
+끝나면 앱 재시작 방법을 알려준 뒤 연결도 확인해줘.
+```
+
+## 2. uv tool로 직접 설치하기
 
 Python을 직접 설치하거나 가상환경을 수동으로 만들 필요는 없습니다.
 [uv](https://docs.astral.sh/uv/)가 필요한 Python과 패키지를 관리합니다.
@@ -52,7 +92,7 @@ uv tool upgrade korean-taxlaw-mcp
 uv tool uninstall korean-taxlaw-mcp
 ```
 
-## 2. 실행파일 경로 확인
+## 3. 실행 파일 경로 확인하기
 
 Windows PowerShell:
 
@@ -66,7 +106,7 @@ macOS 또는 Linux:
 which korean-taxlaw-mcp
 ```
 
-일반적인 경로는 다음과 같습니다.
+실행 파일은 보통 아래 경로에 있습니다.
 
 | OS | 경로 |
 |---|---|
@@ -79,46 +119,9 @@ which korean-taxlaw-mcp
 uv tool update-shell
 ```
 
-## 3. Claude Code와 Codex 연결
+## 4. 데스크톱 앱에 직접 연결하기
 
-모든 프로젝트에서 사용할 수 있도록 사용자 범위에 등록합니다. Claude Code는
-`--scope user`를 지정하고, Codex는 기본 사용자 설정인 `~/.codex/config.toml`에 저장합니다.
-
-uv tool로 설치한 경우:
-
-Claude Code:
-
-```bash
-claude mcp add --scope user korean-taxlaw -- korean-taxlaw-mcp
-claude mcp list
-```
-
-Codex:
-
-```bash
-codex mcp add korean-taxlaw -- korean-taxlaw-mcp
-codex mcp list
-```
-
-Codex에 등록한 MCP 설정은 같은 컴퓨터의 ChatGPT 데스크톱 앱, Codex CLI, IDE 확장에서
-공유됩니다. 자세한 내용은 [Codex MCP 공식 문서](https://developers.openai.com/codex/mcp/)를
-참고하세요.
-
-명령을 찾지 못하는 Windows 환경에서는 절대경로를 지정합니다.
-
-```powershell
-claude mcp add --scope user korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
-codex mcp add korean-taxlaw -- "C:\Users\<사용자>\.local\bin\korean-taxlaw-mcp.exe"
-```
-
-소스 저장소에서 직접 실행하는 경우:
-
-```bash
-claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
-codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
-```
-
-## 4. Claude Desktop 수동 연결
+### Claude Desktop
 
 설정 파일 경로:
 
@@ -127,9 +130,10 @@ codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mc
 | Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 | macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
 
-설정 변경 전 Claude Desktop을 종료하고 기존 파일을 백업하는 것을 권장합니다.
+설정 변경 전 Claude Desktop을 종료하고 기존 파일을 백업하세요. 이미 `mcpServers` 항목이
+있다면 지우지 말고 `korean-taxlaw` 항목만 추가합니다.
 
-### Windows
+Windows:
 
 ```json
 {
@@ -143,7 +147,7 @@ codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mc
 
 JSON의 Windows 경로에서는 백슬래시를 `\\`로 작성합니다.
 
-### macOS
+macOS:
 
 ```json
 {
@@ -157,7 +161,17 @@ JSON의 Windows 경로에서는 백슬래시를 `\\`로 작성합니다.
 
 설정을 저장한 뒤 Claude Desktop을 완전히 종료하고 다시 실행합니다.
 
-## 5. 소스에서 실행
+### ChatGPT 데스크톱 앱의 Codex
+
+1. ChatGPT 데스크톱 앱에서 **Settings → MCP servers**를 엽니다.
+2. **Add server**를 선택합니다.
+3. 이름에 `korean-taxlaw`, 연결 방식에 **STDIO**를 입력합니다.
+4. command에는 3절에서 확인한 실행 파일의 절대경로를 넣습니다.
+5. 저장한 뒤 **Restart**를 선택합니다.
+
+연결 후 대화창에서 `/mcp`를 입력하면 등록된 서버를 확인할 수 있습니다.
+
+## 5. 소스에서 실행하기
 
 코드를 수정하거나 개발에 참여할 때 사용합니다.
 
@@ -171,14 +185,15 @@ uv run korean-taxlaw-mcp --help
 `uv sync`는 호환되는 Python을 확인하고 프로젝트의 `.venv`와 `uv.lock` 기준 의존성을
 준비합니다. 가상환경을 직접 활성화할 필요는 없습니다.
 
-Claude Code 또는 Codex에 소스 실행 방식으로 등록:
+소스에서 실행한 서버를 등록하려면 다음 값을 사용합니다.
 
-```bash
-claude mcp add --scope user korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
-codex mcp add korean-taxlaw -- uv run --directory /절대경로/korean-taxlaw-mcp korean-taxlaw-mcp
-```
+- command: `uv`의 절대경로
+- args: `run`, `--directory`, `/절대경로/korean-taxlaw-mcp`, `korean-taxlaw-mcp`
 
-## 6. pip + venv 대체 설치
+Claude Desktop에서는 `command`와 `args`를 설정 파일에 넣고, ChatGPT 데스크톱 앱에서는
+MCP 서버 추가 화면에서 같은 값을 입력합니다.
+
+## 6. pip + venv로 설치하기
 
 uv를 사용할 수 없는 경우 Python 3.11 이상을 직접 설치한 뒤 사용합니다.
 
@@ -197,7 +212,10 @@ Windows 가상환경 활성화:
 .venv\Scripts\activate
 ```
 
-Claude Desktop에는 가상환경 Python의 절대경로를 지정할 수도 있습니다.
+이 방식으로 연결할 때는 가상환경 Python의 절대경로를 command로 지정하고, args에는
+`-m`, `korean_taxlaw_mcp`를 넣습니다.
+
+Claude Desktop 설정 예시:
 
 ```json
 {
@@ -210,31 +228,17 @@ Claude Desktop에는 가상환경 Python의 절대경로를 지정할 수도 있
 }
 ```
 
-## 7. HTTP 연결
-
-서버 실행:
-
-```bash
-korean-taxlaw-mcp --http --port 8000
-```
-
-Claude Code 또는 Codex 등록:
-
-```bash
-claude mcp add --scope user --transport http korean-taxlaw http://127.0.0.1:8000/mcp
-codex mcp add korean-taxlaw --url http://127.0.0.1:8000/mcp
-```
-
-## 8. 함께 사용하면 좋은 MCP
+## 7. korean-law-mcp와 함께 사용하기
 
 법률·시행령·시행규칙 본문은
 [chrisryugj/korean-law-mcp](https://github.com/chrisryugj/korean-law-mcp), 국세청 고유 자료는
-`korean-taxlaw-mcp`로 조회하는 구성을 권장합니다. 두 서버를 함께 등록하면 법령 본문과
-국세청 해석례·결정례를 서로 다른 출처와 권위 수준으로 확인할 수 있습니다.
+`korean-taxlaw-mcp`로 조회합니다. 두 서버를 함께 등록하면 법령 본문과 국세청
+해석례·결정례를 출처와 권위 수준에 맞춰 나눠 볼 수 있습니다.
 
-## 9. 문제 해결
+## 8. 문제 해결
 
-- `uv` 또는 `korean-taxlaw-mcp`를 찾지 못하면 터미널과 Claude Desktop을 완전히 재시작합니다.
-- Claude Desktop 설정의 `command`에는 실제 실행파일의 절대경로를 사용하는 편이 안정적입니다.
-- JSON 문법 오류가 없는지, 기존 `mcpServers` 항목을 덮어쓰지 않았는지 확인합니다.
-- 연결 후 Claude에게 “사용 가능한 MCP 도구를 확인해줘”라고 요청해 `korean-taxlaw` 등록을 확인합니다.
+- `uv` 또는 `korean-taxlaw-mcp`를 찾지 못하면 터미널과 데스크톱 앱을 완전히 재시작합니다.
+- 설정의 command에는 실제 실행 파일의 절대경로를 넣습니다.
+- Claude Desktop 설정을 직접 수정했다면 JSON 문법과 기존 `mcpServers` 항목을 확인합니다.
+- ChatGPT 데스크톱 앱에서는 **Settings → MCP servers**에서 서버가 활성화됐는지 확인합니다.
+- 연결 후 앱에 “사용 가능한 MCP 도구를 확인해줘”라고 요청해 `korean-taxlaw` 등록을 확인합니다.

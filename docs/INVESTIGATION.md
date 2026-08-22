@@ -2,10 +2,10 @@
 
 조사 시점: 2026-08-19. 사이트 메뉴가 아니라 **실제 HTTP 요청**을 재현해 확인한 내용이다.
 
-## 1. 핵심 발견: 사이트 전체가 하나의 액션 디스패처
+## 1. 국세청 사이트 구조
 
-`taxlaw.nts.go.kr` 은 화면(`/qt/USEQTA001M.do` 등)이 얇은 껍데기이고, 모든 데이터가
-단일 엔드포인트를 통해 흐른다.
+`taxlaw.nts.go.kr` 의 화면(`/qt/USEQTA001M.do` 등)은 얇은 껍데기다. 데이터 요청은
+모두 단일 엔드포인트로 간다.
 
 ```
 POST https://taxlaw.nts.go.kr/action.do
@@ -30,8 +30,8 @@ _req.doAction = function(paramActionId, paramData, ...) {
 }
 ```
 
-**의미**: HTML 을 긁는 대신 액션을 직접 부르면 사이트 개편에 훨씬 덜 취약하다.
-이 서버는 HTML 파싱을 **문서 본문 한 곳**에만 쓴다(HWP→HTML 변환 결과).
+HTML 을 긁지 않고 액션을 직접 호출하면 화면 개편의 영향을 덜 받는다. 이 서버는
+HWP→HTML 변환 결과인 문서 본문만 HTML 로 파싱한다.
 
 ### 접근 조건
 
@@ -48,7 +48,7 @@ _req.doAction = function(paramActionId, paramData, ...) {
 
 ---
 
-## 2. 데이터 종류 inventory
+## 2. 자료 목록
 
 `list_endpoint` 는 사람이 볼 화면, `action` 은 실제 데이터 통로다.
 
@@ -149,7 +149,7 @@ wnSessionUuid[]                     → 화면 추적용. 조회에 불필요
 사이트가 두 표기를 모두 색인해 두므로, 정규형 하나로도 압축형 입력이 잡힌다.
 검색 결과에서는 일치 구간이 `<!HS>…<!HE>` 로 감싸여 오므로 **비교 전에 반드시 제거**해야 한다.
 
-### 검색 연산 (실측 확정)
+### 검색 연산
 
 세법해석 01~04 전체 대상, 반환 건수:
 
@@ -164,7 +164,7 @@ wnSessionUuid[]                     → 화면 추적용. 조회에 불필요
 | `["상속 OR 증여"]` | 0 | `OR` 낱말은 무효 |
 | `["상속"]` + excl `["증여"]` | 7,436 | **NOT** (22,349−14,913 = 7,436 정확히 일치) |
 
-### 정렬 (실측 확정)
+### 정렬
 
 | 값 | 결과 |
 |---|---|
@@ -231,7 +231,7 @@ wnSessionUuid[]                     → 화면 추적용. 조회에 불필요
 | 심판청구 | 1.처분개요 / 2.청구인 주장 및 처분청 의견 / 3.심리 및 판단 / 4.결 론 |
 | 판례 | 번호 절 구조가 아님 (상고이유별 서술 + 결론) |
 
-함정 둘:
+파싱할 때 유의할 점은 두 가지다.
 
 1. 주체 뒤에 조사가 붙는다 — "신청법인**의** 주장". 정규식이 이를 놓치면 절이 빠진다.
 2. 절 안에서 번호가 **다시 1부터** 매겨진다. 이의신청 실측: "2. 신청법인의 주장" 아래에
@@ -256,7 +256,7 @@ ASISTF001MR01 {"ntarClCd":"01"|"03", "ntstSjtClCd":"All", "searchKeyword":"",
 ACMCMA001MR01 {"cmCodeDVOList":[{"cmnClsfCd":"19378"}, …]}  → 공통코드표
 ```
 
-함정:
+주의:
 
 - **`ntstSjtClCd:"All"` 을 빼면 고시·훈령이 0건**으로 온다. 사이트가 초기화 시 넣는 값이다.
 - **집행기준은 `ntstPlcnBkId` 가 필요**하다. 이 목록은 조회 액션이 없고
@@ -273,7 +273,7 @@ ASIAFB001MR01 {"searchNtstBscId":"stttAll",          → 서식 34,487건 (stttF
                "pageIndex":1, "recordCountPerPage":20}
 ```
 
-함정: 파라미터가 `ntstBscId` 가 아니라 **`searchNtstBscId`** 다. 틀리면 0건이 온다.
+주의: 파라미터는 `ntstBscId` 가 아니라 **`searchNtstBscId`** 다. 틀리면 0건이 온다.
 
 파일 다운로드는 `/downloadStorFile.do` 로 가는데, 이는 `actionId`+`data`+`fileType` 을
 POST 로 받아 **서버가 렌더링**해 주는 인쇄 경로다. 안정적인 GET URL 이 없어
@@ -347,7 +347,7 @@ A 와 B 는 **두 번째 마디가 4자리 연도인지**로 갈린다. 이 구�
 <https://www.olta.re.kr>. 국세청과 마찬가지로 메뉴가 아니라 **실제 HTTP 요청**을
 재현해 확인한 내용이다.
 
-## 1. 구조: JSON API 가 없다
+## 1. 지방세 사이트 구조
 
 국세청은 `action.do` 단일 JSON 디스패처지만, 이 사이트는 **검색이 목록 화면 자체로
 가는 form POST** 이고 응답은 서버가 렌더링한 HTML 이다. 그래서 HTML 파싱을 피할 수
@@ -370,7 +370,7 @@ sort=RANK, searchField=ALL, range=ALL, detailSearchIsOnOff=on
 세션·쿠키·CSRF 토큰이 필요하지 않다(실측: 쿠키 없이 200 + 정상 결과).
 페이지의 `<meta name="csrfToken" content="">` 는 비어 있고 검증되지 않는다.
 
-## 2. 자료 종류 inventory
+## 2. 자료 목록
 
 | kind | 자료 | collection | 목록 | 상세 | 규모(취득세 검색) |
 |---|---|---|---|---|---|
@@ -435,7 +435,7 @@ sort=RANK, searchField=ALL, range=ALL, detailSearchIsOnOff=on
 국세청과 달리 **공백이 그대로 AND** 이고, OR 는 ASCII 파이프다(국세청도 파이프지만
 국세청 쪽은 `¦`(U+00A6)가 AND 로 동작하는 함정이 따로 있다).
 
-## 5. 함정 (전부 실측으로 확인)
+## 5. 주의사항
 
 | 증상 | 원인 |
 |---|---|
@@ -481,7 +481,7 @@ sort=RANK, searchField=ALL, range=ALL, detailSearchIsOnOff=on
 
 ## 8. 문서번호 배열
 
-국세와 완전히 다르다 — **생산 부서명 + 일련번호**다.
+국세와 달리 **생산 부서명 + 일련번호**로 구성된다.
 
 | 예 | 구성 |
 |---|---|

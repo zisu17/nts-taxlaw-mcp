@@ -1,7 +1,7 @@
 """자연어 → 국세청 자료 라우팅.
 
-"국세청 예규 찾아줘" 같은 표현이나 문서번호 접두만으로도 이 서버 쪽으로 질의가
-흘러오게 하는 힌트 계층이다. 라우팅은 **어디를 찾을지**만 정하고 내용 판단은 하지 않는다.
+"국세청 예규 찾아줘" 같은 표현이나 문서번호 접두를 보고 조회 영역을 고른다.
+라우팅은 검색할 곳만 정하며 내용은 판단하지 않는다.
 """
 
 from __future__ import annotations
@@ -41,9 +41,9 @@ _PHRASE_TO_DOMAIN: list[tuple[re.Pattern[str], str, tuple[str, ...]]] = [
 #: 국세청 자료임을 강하게 시사하는 표현.
 _NTS_MARKERS = re.compile(r"국세청|국세|세무|세법|예규|과세|납세|세목|국세법령")
 
-#: 검색어에서 걷어낼 표현 — 자료 종류·기관·일반 세무어.
+#: 검색어에서 걷어낼 자료 종류·기관·일반 세무 표현.
 #:
-#: 세목 낱말(상속·양도 등)은 **걷어내지 않는다**. 세목은 문서의 분류값이지 본문
+#: 세목 낱말(상속·양도 등)은 걷어내지 않는다. 세목은 문서의 분류값이지 본문
 #: 낱말과 1:1 이 아니어서(예: '공동상속주택' 관련 예규가 세목상 양도소득세로 분류된다)
 #: 세목을 필터로 강제하면 정작 맞는 문서가 빠진다. 그래서 세목은 추정 결과만
 #: 보고하고 필터로 쓰지 않으며, 낱말은 검색어에 그대로 남긴다.
@@ -67,7 +67,7 @@ def _to_content_query(query: str) -> str:
     사이트 검색은 공백 구분 낱말을 AND 로 묶으므로 "국세청 예규 공동상속주택" 을
     그대로 던지면 '국세청'·'예규' 까지 본문에 있어야 해서 정작 관련 문서가 떨어진다.
     """
-    # 문서번호를 **먼저** 걷어낸다. 순서를 뒤집으면 '적부-국세청-2026-0119' 에서
+    # 문서번호를 먼저 걷어낸다. 순서를 뒤집으면 '적부-국세청-2026-0119' 에서
     # '적부'·'국세청' 만 지워져 '- -2026-0119' 같은 잔해가 검색어로 남는다.
     s = _DOCNUM_SHAPE.sub(" ", query)
     for word in _STRIP_FOR_SEARCH:
@@ -85,11 +85,11 @@ class RouteHint:
     domains: list[str]
     #: 자료 종류·기관 표현을 걷어낸 내용 키워드.
     content_query: str
-    #: 판단 근거 — 왜 이렇게 라우팅했는지 사용자가 감사할 수 있게 남긴다.
+    #: 사용자가 라우팅 판단 과정을 확인할 수 있도록 근거를 남긴다.
     reasons: list[str] = field(default_factory=list)
     doc_classes: list[str] = field(default_factory=list)
     document_number: str | None = None
-    #: 질의에서 추정한 세목. **필터로 강제하지 않는다.**
+    #: 질의에서 추정한 세목. 필터로 강제하지 않는다.
     tax_type_codes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
@@ -118,7 +118,7 @@ def route_query(query: str | None) -> RouteHint:
         if name not in domains:
             domains.append(name)
 
-    # 1) 문서번호가 있으면 그것이 가장 강한 신호다
+    # 문서번호가 있으면 가장 먼저 반영한다.
     document_number: str | None = None
     for token in [*q.split(), q]:
         if not looks_like_document_number(token):
@@ -134,7 +134,7 @@ def route_query(query: str | None) -> RouteHint:
         reasons.append(f"문서번호 패턴 '{parsed.canonical}' 인식 (레이아웃 {parsed.layout})")
         break
 
-    # 2) 표현 매칭
+    # 표현 매칭
     for pattern, domain, classes in _PHRASE_TO_DOMAIN:
         if not pattern.search(q):
             continue
@@ -144,7 +144,7 @@ def route_query(query: str | None) -> RouteHint:
                 doc_classes.append(code)
         reasons.append(f"표현 '{pattern.pattern}' → {domain}")
 
-    # 3) 세목 (참고용 추정치)
+    # 세목은 참고용으로만 추정한다.
     tax_codes: list[str] = []
     for alias, code in TAX_TYPE_ALIAS.items():
         if len(alias) >= 2 and alias in q and code not in tax_codes:

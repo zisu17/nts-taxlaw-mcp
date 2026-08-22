@@ -29,8 +29,8 @@ korean-taxlaw-mcp
 korean-law-mcp (MIT)
 https://github.com/chrisryugj/korean-law-mcp
 
-다음 설계 판단을 참조했다. 코드를 복사하지 않고(언어·업스트림이 다름) 판단만
-가져왔으며, 각 항목은 그 저장소가 실측으로 얻은 결론이므로 출처를 밝힌다.
+다음 설계를 참고했다. 언어와 업스트림이 달라 코드는 복사하지 않았고, 실측에서 얻은
+판단만 적용했다. 각 판단의 출처는 아래에 적었다.
 
 - 자료 부존재(NOT_FOUND)와 업스트림 조회 실패를 별도 오류 코드로 분리하는 원칙
   (src/lib/errors.ts 의 UPSTREAM_NO_DATA vs NOT_FOUND 구분)
@@ -43,9 +43,9 @@ https://github.com/chrisryugj/korean-law-mcp
 - 200 응답 + HTML 본문을 점검 페이지로 간주해 재시도하는 방어
 - 노출 도구 수를 억제해 모델의 도구 선택 정확도를 지키는 설계
 
-또한 taxlaw.nts.go.kr 의 action.do 프로토콜(actionId + paramData, 액션 ASIQTB002PR01)은
+taxlaw.nts.go.kr 의 action.do 프로토콜(actionId + paramData, 액션 ASIQTB002PR01)은
 위 저장소의 src/tools/precedents.ts 가 판례 본문 폴백 경로에서 쓰던 것을 확인한 뒤,
-이 프로젝트에서 검색·해석례·통칙·집행기준·고시·훈령·서식까지 확장해 전면 채택했다.
+이 프로젝트에서 검색·해석례·통칙·집행기준·고시·훈령·서식까지 넓혀 사용했다.
 
 자세한 중복 분석은 docs/OVERLAP.md 를 보라.
 

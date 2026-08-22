@@ -1,11 +1,11 @@
 """FastMCP 도구 등록.
 
-도구를 자료 종류마다 하나씩 만들면 20~30개가 되고, 그러면 모델이 어느 것을 불러야
-할지 헷갈려 정확도가 떨어진다. 그래서 **도메인 파라미터 기반 통합 도구** 9개로 묶었다.
+자료 종류마다 도구를 만들면 20~30개까지 늘어나 모델의 선택 정확도가 떨어진다.
+관련 기능을 도메인 파라미터 기반 통합 도구 9개로 묶었다.
 
 상세 조회는 사이트 액션이 문서 종류와 무관하게 하나(``ASIQTB002PR01``)이므로
-``get_tax_document`` 하나로 합쳤다 — 사용자가 '적부'가 결정례인지 해석례인지 알아야
-할 이유가 없다(권장안의 get_tax_interpretation / get_tax_decision 을 대체한다).
+``get_tax_document`` 하나로 합쳤다. 사용자가 '적부'가 결정례인지 해석례인지 구분하지
+않아도 된다(권장안의 get_tax_interpretation / get_tax_decision 을 대체한다).
 """
 
 from __future__ import annotations
@@ -547,7 +547,7 @@ async def search_taxlaw(
     hint = route_query(query)
     targets = list(domains) if domains else (hint.domains or ["interpretation", "decision"])
     codes, _unresolved = _resolve_tax_types(tax_type)
-    # 세목은 **사용자가 명시했을 때만** 필터로 쓴다. 추정 세목을 강제하면 거짓 부정이
+    # 세목은 사용자가 명시했을 때만 필터로 쓴다. 추정 세목을 강제하면 거짓 부정이
     # 난다 — '상속 공동상속주택' 은 308 로 추정되지만 정작 맞는 예규는 307 로 분류돼 있다.
     search_query = hint.content_query or query
 

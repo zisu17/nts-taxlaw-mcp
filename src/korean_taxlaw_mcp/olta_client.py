@@ -1,8 +1,7 @@
 """한국지방세연구원(KILF) 지방세 법령정보시스템 클라이언트.
 
-국세청과 달리 이 사이트는 **JSON API 가 없다.** 검색은 목록 화면 자체로 보내는
-평범한 form POST 이고, 응답은 서버가 렌더링한 HTML 이다. 그래서 여기서는
-HTML 파싱을 피할 수 없고, 대신 파서를 한 곳(:mod:`olta_parse`)에 몰아둔다.
+국세청과 달리 이 사이트에는 JSON API가 없다. 목록 화면에 form POST로 검색하고
+서버가 렌더링한 HTML을 받는다. HTML 파싱은 :mod:`olta_parse` 한 곳에서 처리한다.
 
 검색 파라미터(실측 확정)::
 
@@ -14,7 +13,7 @@ HTML 파싱을 피할 수 없고, 대신 파서를 한 곳(:mod:`olta_parse`)에
     searchType    = 1(통합검색) | 2(문서번호검색)
     query         = 검색어 (연산자 &, |, !, [], {} 지원)
     taxTitleStr   = 세목 코드를 `|` 로 이어 붙인 문자열
-    startCount    = **오프셋**(0, 10, 20 …). 국세청의 페이지 번호와 다르다
+    startCount    = 오프셋(0, 10, 20 …). 국세청의 페이지 번호와 다르다
     startDate/endDate = YYYY.MM.DD
     sort          = RANK
     searchField   = ALL
@@ -151,7 +150,7 @@ class Source(NamedTuple):
     list_path: str
     detail_path: str
     collection: str
-    #: **필수**. 빼면 법원 판례(`sentencing_supreme`)가 HTTP 500 을 낸다(실측).
+    #: 필수. 빼면 법원 판례(`sentencing_supreme`)가 HTTP 500 을 낸다(실측).
     #: 다른 종류는 없어도 동작하지만 일관성을 위해 전부 함께 보낸다.
     menu_no: str
     upper_menu_id: str
@@ -261,7 +260,7 @@ async def detail_html(
     if relationship_num:
         params["relationshipNum"] = relationship_num
     if kind == "court":
-        # 법원 판례 상세는 srchWrd 가 **없으면** HTTP 500 을 낸다(실측). 빈 값이어도
+        # 법원 판례 상세는 srchWrd 가 없으면 HTTP 500 을 낸다(실측). 빈 값이어도
         # 존재하기만 하면 열린다 — 검색어 하이라이트용 파라미터인데 필수로 취급된다.
         params.setdefault("srchWrd", "")
         params.setdefault("menuNo", src.menu_no)
