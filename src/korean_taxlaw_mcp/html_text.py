@@ -101,7 +101,7 @@ class SplitBody:
     text: str
     #: 인식된 절. 어휘에 걸린 것만 담기며, 없으면 빈 dict.
     sections: dict[str, str] = field(default_factory=dict)
-    #: 원문에서 읽은 절 제목 그대로 — 분해 근거를 감사할 수 있게 남긴다.
+#: 분해 과정을 확인할 수 있도록 원문에서 읽은 절 제목을 그대로 남긴다.
     headings: list[dict[str, str]] = field(default_factory=list)
 
 

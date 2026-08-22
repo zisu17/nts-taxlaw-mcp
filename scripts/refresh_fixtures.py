@@ -8,9 +8,9 @@ fixture 는 실제 응답을 그대로 저장한 것이라 8MB 가까이 된다.
     python scripts/refresh_fixtures.py           # 없는 것만 받기
     python scripts/refresh_fixtures.py --force   # 전부 다시 받기
 
-상세 fixture 는 **고정된 ntstDcmId** 로 받는다. 공개된 확정 문서라 내용이 변하지
+상세 fixture는 고정된 ``ntstDcmId``로 받는다. 공개된 확정 문서라 내용이 변하지
 않으므로 언제 다시 받아도 같은 문서가 온다. 검색 fixture 는 최신 N 건이라 내용이
-달라지는데, 테스트가 건수 대신 **구조**만 검증하므로 문제되지 않는다.
+달라지지만 테스트는 건수 대신 구조만 검증한다.
 """
 
 from __future__ import annotations

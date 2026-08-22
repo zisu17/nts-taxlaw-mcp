@@ -150,7 +150,7 @@ def decode_or_none(table: dict[str, str], code: Any) -> str | None:
 
 #: 지방세 세목. 검색 파라미터 `taxTitleStr` 에 `|` 로 이어 붙여 보낸다.
 #:
-#: **주의**: 체크박스 이름(`ch_deatail_search_taxlist`)을 그대로 보내면 필터가 걸리지
+#: 체크박스 이름(`ch_deatail_search_taxlist`)을 그대로 보내면 필터가 걸리지
 #: 않는다(실측: 총건수가 변하지 않음). 실제 파라미터는 `taxTitleStr` 이다.
 LOCAL_TAX_TYPE: dict[str, str] = {
     "11100": "취득세",

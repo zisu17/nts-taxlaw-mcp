@@ -1,6 +1,6 @@
 # 원격 HTTP 배포용 이미지 (Cloud Run 등).
 #
-# 로컬 STDIO 사용에는 필요하지 않다 — `uv tool install` 경로는 이 파일과 무관하다.
+# 로컬 STDIO에서는 쓰지 않는다. `uv tool install` 경로와도 무관하다.
 FROM python:3.13-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
@@ -12,7 +12,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
-# 의존성 레이어를 소스와 분리한다 — 코드만 고쳤을 때 재설치를 건너뛰기 위해서다.
+# 코드만 고쳤을 때 재설치하지 않도록 의존성 레이어를 소스와 분리한다.
 # README.md 는 pyproject 의 readme 항목이 가리키므로 프로젝트 빌드에 필요하다.
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --locked --no-dev --no-install-project

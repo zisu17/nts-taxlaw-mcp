@@ -22,12 +22,12 @@ from __future__ import annotations
 import re
 from datetime import date
 
-#: OR 연산자. ASCII 파이프다 — broken bar(¦, U+00A6)는 AND 로 동작하므로 쓰면 안 된다.
+#: OR 연산자는 ASCII 파이프다. broken bar(¦, U+00A6)는 AND로 동작한다.
 OR_SEPARATOR = "|"
 
 #: 정렬 기준. 사이트가 받는 값은 ``<필드>/<방향>`` 형태다.
 #:
-#: **주의**: 허용되지 않는 필드명을 주면 사이트는 오류가 아니라 **0건**을 돌려준다
+#: 허용되지 않는 필드명을 주면 사이트는 오류가 아니라 0건을 돌려준다
 #: (실측: ``RANK/DESC`` → total 0, status SUCCESS). 조용한 0건은 "자료 없음"으로
 #: 오해되기 딱 좋으므로 실측 검증된 토큰만 내보낸다.
 #: 검증된 필드: ``DCM_RGT_DTM``(등록일), ``FRS_RGT_DTM``(최초등록일), ``SCORE``(적합도).

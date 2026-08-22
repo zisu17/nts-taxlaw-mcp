@@ -26,8 +26,8 @@
 | 지방세 심판·감사·법원·헌재 결정례 검색 | `search_local_tax_decisions` |
 | 지방세 문서번호로 본문 조회 | `lookup_local_tax_document` |
 
-문서번호를 알고 있다면 `lookup_tax_document` 또는 `lookup_local_tax_document`를 먼저
-사용하는 것이 빠르고 정확합니다.
+문서번호를 알고 있다면 `lookup_tax_document` 또는 `lookup_local_tax_document`부터
+사용하세요. 키워드 검색보다 빠르고 정확합니다.
 
 ## 문서번호 조회 원칙
 
@@ -76,7 +76,8 @@
 - 법률·시행령·시행규칙 본문은 국가법령정보센터 기반의
   [chrisryugj/korean-law-mcp](https://github.com/chrisryugj/korean-law-mcp)에서 조회할 수 있습니다.
 - 일반 판례 전체가 아니라 원본 시스템에서 조세 자료로 분류한 문서를 조회합니다.
-- 세법집행기준 본문, 일부 고시·훈령, 서식 파일은 메타데이터나 파일 식별자만 반환할 수 있습니다.
+- 원본이 본문을 제공하지 않는 세법집행기준, 일부 고시·훈령, 서식 파일은 메타데이터나
+  파일 식별자만 반환합니다.
 - 상세한 지원·미지원 범위는 [지원 범위 조사](INVESTIGATION.md)를 참고하세요.
 
 이 서버는 원문 검색과 구조화를 위한 데이터 접근 계층이며 세무 자문을 제공하지 않습니다.

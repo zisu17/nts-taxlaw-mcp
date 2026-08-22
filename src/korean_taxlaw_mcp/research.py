@@ -1,13 +1,12 @@
-"""tax_research — 세무 상담 근거를 층별로 모아 주는 체인 도구.
+"""세무 상담 근거를 층별로 모으는 ``tax_research`` 도구.
 
 실무에서 하나의 쟁점을 검토할 때 보는 순서는 정해져 있다::
 
     세법 → 시행령 → 시행규칙 → 기본통칙 → 세법집행기준 → 국세청 해석례 → 불복·판례
 
-이 도구는 **그 층들을 모아 오는 일만** 한다. 결론을 내지 않고, 층별로 원문 근거와
-출처를 붙여 돌려준다. 법령 본문(법률·시행령·시행규칙)은 이 서버의 범위가 아니다 —
-법제처 데이터를 쓰는 korean-law-mcp 가 이미 안정적으로 제공하므로 중복 구현하지
-않고, 어떤 조문을 확인해야 하는지만 지목한다.
+이 도구는 결론을 내리지 않고 각 층의 원문 근거와 출처만 모은다. 법령 본문
+(법률·시행령·시행규칙)은 법제처 데이터를 쓰는 korean-law-mcp가 제공하므로 중복
+구현하지 않는다. 대신 확인해야 할 조문을 응답에 남긴다.
 """
 
 from __future__ import annotations
@@ -148,7 +147,7 @@ async def tax_research(
     include_guidance: bool = True,
 ) -> dict[str, Any]:
     codes, names = _infer_tax_types(question, tax_type)
-    # 세목 필터는 **사용자가 명시했을 때만** 적용한다. 질문에서 추정한 세목을 필터로
+    # 세목 필터는 사용자가 명시했을 때만 적용한다. 질문에서 추정한 세목을 필터로
     # 강제하면 거짓 부정이 난다: '상속' 은 상속증여세(308)로 추정되지만 공동상속주택
     # 관련 예규는 세목이 양도소득세(307)로 분류돼 있어 308 필터에 걸러진다.
     # 법적 근거 조사에서 누락은 잡음보다 위험하다.
@@ -161,7 +160,7 @@ async def tax_research(
     base_query = " ".join(keywords)
     layers: list[dict[str, Any]] = []
 
-    # 1) 법령 층 — 이 서버가 다루지 않는다는 사실을 명시적으로 남긴다.
+    # 법령 층은 이 서버의 범위 밖이라고 응답에 명시한다.
     targets = ", ".join(f"{r['lawName']}{r.get('article', '')}" for r in law_refs)
     for layer_name, level in (
         ("법률", AuthorityLevel.STATUTE),
@@ -179,7 +178,7 @@ async def tax_research(
             )
         )
 
-    # 2) 기본통칙 / 세법집행기준 — 법령명이 필요하므로 추정된 대상이 있을 때만
+    # 기본통칙과 세법집행기준은 법령명을 추정할 수 있을 때만 조회한다.
     if include_guidance:
         try:
             ruling_laws = [x["ntstNm"] for x in await list_basic_ruling_laws()]
@@ -218,7 +217,7 @@ async def tax_research(
                            status="error", message=str(exc))
                 )
 
-    # 3~4) 국세청 해석례 + 불복 결정례 + 판례
+    # 국세청 해석례, 불복 결정례, 판례를 조회한다.
     plan: list[tuple[str, list[str], AuthorityLevel]] = [
         ("국세청 해석례", list(INTERPRETATION_CLASSES), AuthorityLevel.NTS_RULING),
         ("불복 결정례(적부·이의·심사·심판)", ["05", "06", "07", "08"], AuthorityLevel.ADJUDICATION),
